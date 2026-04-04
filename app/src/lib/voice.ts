@@ -1,0 +1,1 @@
+export const DEFAULT_ELEVENLABS_VOICE_ID = "EIwCtZUmv2FYTIWbFz0A";

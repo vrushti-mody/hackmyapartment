@@ -1,0 +1,136 @@
+/**
+ * Shop Home Page — clean hero + horizontal carousels for bundles & products.
+ */
+"use client";
+
+import Link from "next/link";
+import { useState, useEffect } from "react";
+import { ShopHeader } from "@/components/shop/shop-header";
+import { HorizontalCarousel } from "@/components/shop/horizontal-carousel";
+import { getEpisodes, getAllProducts, getRoomGradient, type ProductWithEpisode } from "@/lib/store-service";
+import { Episode } from "@/lib/types";
+
+function BundleCarouselCard({ episode }: { episode: Episode }) {
+  const total = episode.items.reduce((s, i) => s + i.amount, 0);
+  const theme = episode.theme?.trim();
+  return (
+    <Link
+      href={`/shop/bundles/${episode.id}`}
+      className="shrink-0 w-56 snap-start group"
+    >
+      <div className="bg-white border border-zinc-200 rounded-2xl overflow-hidden hover:border-zinc-300 hover:shadow-md transition-all duration-200">
+        <div className="h-36 overflow-hidden relative">
+          {episode.roomImageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={episode.roomImageUrl} alt={episode.roomType} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+          ) : (
+            <div className="w-full h-full" style={{ background: getRoomGradient(episode.roomType) }} />
+          )}
+          <span className="absolute top-2 left-2 bg-white/90 backdrop-blur-sm text-zinc-700 text-[10px] font-semibold px-2 py-0.5 rounded-full">
+            {episode.roomType}
+          </span>
+        </div>
+        <div className="p-3">
+          <h3 className="font-semibold text-sm text-zinc-800">{episode.roomType} Bundle</h3>
+          {theme && (
+            <p className="text-[11px] text-zinc-500 mt-1 line-clamp-1">
+              Theme: {theme}
+            </p>
+          )}
+          <p className="text-xs text-zinc-400 mt-0.5">{episode.items.length} items · ${total.toFixed(2)}</p>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+function ProductCarouselCard({ product }: { product: ProductWithEpisode }) {
+  return (
+    <Link
+      href={`/shop/products/${product.id}`}
+      className="shrink-0 w-44 snap-start group"
+    >
+      <div className="bg-white border border-zinc-200 rounded-2xl overflow-hidden hover:border-zinc-300 hover:shadow-sm transition-all duration-200">
+        <div className="h-32 bg-zinc-50 overflow-hidden">
+          {product.imageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={product.imageUrl} alt={product.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-2xl opacity-20">📦</div>
+          )}
+        </div>
+        <div className="p-2.5">
+          <h4 className="font-semibold text-[13px] text-zinc-800 leading-tight line-clamp-2">{product.title}</h4>
+          <p className="font-bold text-sm text-zinc-900 mt-1">${product.amount.toFixed(2)}</p>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+export default function ShopHomePage() {
+  const [episodes, setEpisodes] = useState<Episode[]>([]);
+  const [products, setProducts] = useState<ProductWithEpisode[]>([]);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    async function loadData() {
+      const [eps, prods] = await Promise.all([getEpisodes(), getAllProducts()]);
+      setEpisodes(eps);
+      setProducts(prods);
+      setLoaded(true);
+    }
+    loadData();
+  }, []);
+
+  if (!loaded) return (<div className="min-h-screen bg-zinc-50 flex items-center justify-center"><div className="text-sm text-zinc-400 animate-pulse">Loading…</div></div>);
+
+  return (
+    <div className="min-h-screen bg-white text-zinc-900">
+      <ShopHeader />
+
+      {/* Hero */}
+      <div className="max-w-6xl mx-auto px-4 pt-12 pb-10 text-center">
+        <p className="text-xs font-semibold text-zinc-400 uppercase tracking-widest mb-3">@hackmyapartment</p>
+        <h1 className="text-3xl sm:text-4xl font-bold text-zinc-900 leading-tight mb-3">
+          Apartment upgrades on a budget
+        </h1>
+        <p className="text-zinc-500 text-base max-w-md mx-auto">
+          Curated product bundles from our reels — every item linked and ready to shop.
+        </p>
+      </div>
+
+      <main className="max-w-6xl mx-auto px-4 pb-16 space-y-12">
+        {/* Bundle Carousel */}
+        <HorizontalCarousel title="Shop Bundles" viewAllHref="/shop/bundles">
+          {episodes.map((ep) => (
+            <BundleCarouselCard key={ep.id} episode={ep} />
+          ))}
+        </HorizontalCarousel>
+
+        {/* Product Carousel */}
+        <HorizontalCarousel title="Featured Products" viewAllHref="/shop/products">
+          {products.map((p) => (
+            <ProductCarouselCard key={p.id} product={p} />
+          ))}
+        </HorizontalCarousel>
+
+        {/* Mobile nav shortcuts */}
+        <div className="sm:hidden flex gap-3">
+          <Link href="/shop/bundles" className="flex-1 text-center text-sm font-semibold border border-zinc-200 py-3 rounded-xl hover:bg-zinc-50 transition">
+            All Bundles
+          </Link>
+          <Link href="/shop/products" className="flex-1 text-center text-sm font-semibold border border-zinc-200 py-3 rounded-xl hover:bg-zinc-50 transition">
+            All Products
+          </Link>
+        </div>
+      </main>
+
+      {/* Footer */}
+      <footer className="border-t border-zinc-100 py-8 text-center text-sm text-zinc-400">
+        <p className="font-medium text-zinc-600 mb-1">@hackmyapartment</p>
+        <p>Affordable home upgrades, one reel at a time.</p>
+      </footer>
+    </div>
+  );
+}
