@@ -9,6 +9,8 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req: NextRequest) {
   const url = req.nextUrl.searchParams.get("url");
 
@@ -26,13 +28,12 @@ export async function GET(req: NextRequest) {
   try {
     const response = await fetch(decodedUrl, {
       headers: {
-        // Mimic a browser request to avoid service blocks
         "User-Agent":
           "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/120 Safari/537.36",
         Accept: "image/*,*/*;q=0.8",
       },
-      // Follow redirects (Google Drive thumbnails redirect once)
       redirect: "follow",
+      cache: "no-store", // Crucial: tell Next.js NOT to reuse the fetch buffer across requests
     });
 
     if (!response.ok) {
@@ -48,7 +49,11 @@ export async function GET(req: NextRequest) {
       status: 200,
       headers: {
         "Content-Type": contentType,
-        "Cache-Control": "public, max-age=86400, immutable",
+        // Crucial: Prevent Netlify Edge from treating /api/proxy-image as a static
+        // path and serving the very first requested image for every subsequent request!
+        "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+        "Pragma": "no-cache",
+        "Expires": "0",
         "Access-Control-Allow-Origin": "*",
       },
     });
