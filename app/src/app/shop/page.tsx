@@ -6,6 +6,7 @@
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { ShopHeader } from "@/components/shop/shop-header";
+import { ShopFooter } from "@/components/shop/shop-footer";
 import { HorizontalCarousel } from "@/components/shop/horizontal-carousel";
 import { getEpisodes, getAllProducts, getRoomGradient, type ProductWithEpisode } from "@/lib/store-service";
 import { Episode } from "@/lib/types";
@@ -136,19 +137,7 @@ export default function ShopHomePage() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-zinc-100 py-8 text-center text-sm text-zinc-400">
-        <p className="mb-1">
-          <a
-            href={INSTAGRAM_URL}
-            target="_blank"
-            rel="noreferrer"
-            className="font-medium text-zinc-600 hover:text-zinc-900 transition"
-          >
-            @hackmyapartment
-          </a>
-        </p>
-        <p>Affordable home upgrades, one reel at a time.</p>
-      </footer>
+      <ShopFooter />
     </div>
   );
 }
