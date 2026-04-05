@@ -233,21 +233,21 @@ export function VideoPreview({
         defaultProps: renderInputProps,
       };
 
-      const webmSupport = await canRenderMediaOnWeb({
-        container: "webm",
-        videoCodec: "vp9",
-        audioCodec: audioUrl ? "opus" : null,
+      const mp4Support = await canRenderMediaOnWeb({
+        container: "mp4",
+        videoCodec: "h264",
+        audioCodec: audioUrl ? "aac" : null,
         width: VIDEO_WIDTH,
         height: VIDEO_HEIGHT,
         muted: !audioUrl,
         outputTarget: "arraybuffer",
       });
 
-      const mp4Support = !webmSupport.canRender
+      const webmSupport = !mp4Support.canRender
         ? await canRenderMediaOnWeb({
-            container: "mp4",
-            videoCodec: "h264",
-            audioCodec: audioUrl ? "aac" : null,
+            container: "webm",
+            videoCodec: "vp9",
+            audioCodec: audioUrl ? "opus" : null,
             width: VIDEO_WIDTH,
             height: VIDEO_HEIGHT,
             muted: !audioUrl,
@@ -255,28 +255,28 @@ export function VideoPreview({
           })
         : null;
 
-      if (!webmSupport.canRender && !mp4Support?.canRender) {
+      if (!mp4Support.canRender && !webmSupport?.canRender) {
         await requestServerRender();
         setRecordDone(true);
         return;
       }
 
-      const format = webmSupport.canRender
+      const format = mp4Support.canRender
         ? {
-            container: "webm" as const,
-            videoCodec: webmSupport.resolvedVideoCodec ?? "vp9",
-            audioCodec: audioUrl
-              ? (webmSupport.resolvedAudioCodec ?? "opus")
-              : undefined,
-            filename: `${safeSlug}-hq.webm`,
-          }
-        : {
             container: "mp4" as const,
             videoCodec: mp4Support?.resolvedVideoCodec ?? "h264",
             audioCodec: audioUrl
               ? (mp4Support?.resolvedAudioCodec ?? "aac")
               : undefined,
             filename: `${safeSlug}-hq.mp4`,
+          }
+        : {
+            container: "webm" as const,
+            videoCodec: webmSupport?.resolvedVideoCodec ?? "vp9",
+            audioCodec: audioUrl
+              ? (webmSupport?.resolvedAudioCodec ?? "opus")
+              : undefined,
+            filename: `${safeSlug}-hq.webm`,
           };
 
       const { getBlob } = await renderMediaOnWeb({

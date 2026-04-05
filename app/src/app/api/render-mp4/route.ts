@@ -8,6 +8,7 @@ import os from "os";
 // We cache the bundle path in memory because bundling takes a few seconds.
 // This makes subsequent renders MUCH faster.
 let cachedBundleUrl: string | null = null;
+let cachedBrowserExecutable: string | null | undefined;
 const remotionTempRoot = path.join(os.tmpdir(), "hackmyapartment-remotion");
 const remotionBundleDir = path.join(remotionTempRoot, "bundle");
 
@@ -56,6 +57,29 @@ async function withWritableRemotionCwd<T>(fn: () => Promise<T>) {
   }
 }
 
+async function getHostedBrowserExecutable() {
+  if (cachedBrowserExecutable !== undefined) {
+    return cachedBrowserExecutable;
+  }
+
+  if (process.platform !== "linux") {
+    cachedBrowserExecutable = null;
+    return cachedBrowserExecutable;
+  }
+
+  try {
+    const chromiumModule = await import("@sparticuz/chromium");
+    const Chromium = chromiumModule.default;
+    Chromium.setGraphicsMode = false;
+    cachedBrowserExecutable = await Chromium.executablePath();
+    return cachedBrowserExecutable;
+  } catch (error) {
+    console.warn("Falling back to Remotion-managed browser", error);
+    cachedBrowserExecutable = null;
+    return cachedBrowserExecutable;
+  }
+}
+
 export const maxDuration = 60; // Next.js serverless timeout for API routes (60s limit is typical on Hobby, but local isn't affected)
 
 export async function POST(req: NextRequest) {
@@ -64,6 +88,11 @@ export async function POST(req: NextRequest) {
     const { items = [], roomType = "room", roomImageUrl, audioUrl } = body;
 
     await ensureWritableRemotionPaths();
+    const browserExecutable = await getHostedBrowserExecutable();
+    const chromiumOptions =
+      process.platform === "linux"
+        ? { enableMultiProcessOnLinux: false }
+        : undefined;
 
     // Ensure we have a valid bundle
     if (!cachedBundleUrl || !fs.existsSync(cachedBundleUrl)) {
@@ -108,6 +137,8 @@ export async function POST(req: NextRequest) {
       getCompositions(cachedBundleUrl!, {
         inputProps: safeBody,
         chromeMode: "headless-shell",
+        browserExecutable,
+        chromiumOptions,
         onBrowserDownload: ({ chromeMode }) => ({
           version: null,
           onProgress: ({ percent }) => {
@@ -138,6 +169,8 @@ export async function POST(req: NextRequest) {
         audioCodec: audioUrl ? "aac" : undefined,
         jpegQuality: 75,
         chromeMode: "headless-shell",
+        browserExecutable,
+        chromiumOptions,
         onBrowserDownload: ({ chromeMode }) => ({
           version: null,
           onProgress: ({ percent }) => {
