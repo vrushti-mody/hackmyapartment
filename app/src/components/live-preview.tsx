@@ -99,8 +99,13 @@ export function LivePreview({
         const binaryString = atob(data.audio_base64);
         const bytes = new Uint8Array(binaryString.length);
         for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
+        // Revoke the old blob URL if one exists to prevent memory leaks
+        if (audioUrl && audioUrl.startsWith("blob:")) {
+          URL.revokeObjectURL(audioUrl);
+        }
+        
         audioBlobRef.current = new Blob([bytes], { type: "audio/mpeg" });
-        setAudioUrl(`data:audio/mpeg;base64,${data.audio_base64}`);
+        setAudioUrl(URL.createObjectURL(audioBlobRef.current));
         setAudioTimings(calculateSegmentTimings(data.alignment, items.length));
         setAudioStatus("done");
       };
@@ -117,30 +122,22 @@ export function LivePreview({
           let debugSafeId = settings.elevenLabsVoiceId;
 
           try {
-            // First, dynamically pull a live Voice ID that isn't deleted or region-locked to prevent 404s
             const apiRes = await fetch("https://api.elevenlabs.io/v1/voices", { headers: { "xi-api-key": settings.elevenLabsApiKey } });
             const schema = (await apiRes.json()) as ElevenLabsVoiceResponse;
-
             debugVoicesCount = schema?.voices?.length || 0;
-
-            // We must allow the user's exact UI setting ID to pass through.
-            // ElevenLabs rejects global Default IDs as "Library" voices on free arrays.
-            // The user MUST use a uniquely generated Voice ID from their personal VoiceLab array.
             const safeId = settings.elevenLabsVoiceId;
             debugSafeId = safeId;
 
-            // Attempt standard generation bypassing the advanced endpoint constraints
             const basicBlob = await generateAudio(script, settings.elevenLabsApiKey, safeId);
-            const buffer = await basicBlob.arrayBuffer();
-            const bytes = new Uint8Array(buffer);
-            let binaryString = '';
-            for (let i = 0; i < bytes.byteLength; i++) {
-              binaryString += String.fromCharCode(bytes[i]);
+            
+            // Revoke the old blob URL if one exists
+            if (audioUrl && audioUrl.startsWith("blob:")) {
+              URL.revokeObjectURL(audioUrl);
             }
-            const base64 = btoa(binaryString);
 
             audioBlobRef.current = basicBlob;
-            setAudioUrl(`data:audio/mpeg;base64,${base64}`);
+            setAudioUrl(URL.createObjectURL(basicBlob));
+            
             // Fakes the alignment mapping mathematically since standard TTS has no timestamp data
             setAudioTimings(calculateSegmentTimings(null, items.length));
             setAudioStatus("done");
