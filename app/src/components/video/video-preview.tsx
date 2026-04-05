@@ -29,6 +29,105 @@ interface VideoPreviewProps {
   timings?: AudioTimingMapping | null;
 }
 
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : "Unknown error";
+}
+
+type FFmpegProgressListener = (progress: number) => void;
+
+let ffmpegPromise: Promise<{
+  ffmpeg: import("@ffmpeg/ffmpeg").FFmpeg;
+  fetchFile: typeof import("@ffmpeg/util").fetchFile;
+}> | null = null;
+
+async function getBrowserFfmpeg() {
+  if (!ffmpegPromise) {
+    ffmpegPromise = (async () => {
+      const [{ FFmpeg }, { fetchFile }] = await Promise.all([
+        import("@ffmpeg/ffmpeg"),
+        import("@ffmpeg/util"),
+      ]);
+
+      const ffmpeg = new FFmpeg();
+      await ffmpeg.load();
+
+      return { ffmpeg, fetchFile };
+    })().catch((error) => {
+      ffmpegPromise = null;
+      throw error;
+    });
+  }
+
+  return ffmpegPromise;
+}
+
+async function transcodeWebmToMp4(
+  inputBlob: Blob,
+  hasAudio: boolean,
+  onProgress?: FFmpegProgressListener
+) {
+  const { ffmpeg, fetchFile } = await getBrowserFfmpeg();
+  const inputName = `input-${Date.now()}.webm`;
+  const outputName = `output-${Date.now()}.mp4`;
+
+  const progressHandler = ({ progress }: { progress: number }) => {
+    onProgress?.(progress);
+  };
+
+  ffmpeg.on("progress", progressHandler);
+
+  try {
+    await ffmpeg.writeFile(inputName, await fetchFile(inputBlob));
+
+    const args = [
+      "-i",
+      inputName,
+      "-c:v",
+      "libx264",
+      "-preset",
+      "ultrafast",
+      "-pix_fmt",
+      "yuv420p",
+      "-movflags",
+      "+faststart",
+      outputName,
+    ];
+
+    if (hasAudio) {
+      args.splice(args.length - 1, 0, "-c:a", "aac");
+    } else {
+      args.splice(args.length - 1, 0, "-an");
+    }
+
+    const exitCode = await ffmpeg.exec(args);
+    if (exitCode !== 0) {
+      throw new Error(`FFmpeg exited with code ${exitCode}`);
+    }
+
+    const output = await ffmpeg.readFile(outputName);
+    const bytes =
+      output instanceof Uint8Array
+        ? output
+        : new TextEncoder().encode(String(output));
+    const buffer = bytes.buffer.slice(
+      bytes.byteOffset,
+      bytes.byteOffset + bytes.byteLength
+    ) as ArrayBuffer;
+
+    return new Blob([buffer], { type: "video/mp4" });
+  } finally {
+    ffmpeg.off("progress", progressHandler);
+
+    try {
+      await ffmpeg.deleteFile(inputName);
+    } catch {}
+
+    try {
+      await ffmpeg.deleteFile(outputName);
+    } catch {}
+  }
+}
+
 function toRenderSafeAssetUrl(url: string): string {
   if (
     url.startsWith("data:") ||
@@ -58,6 +157,7 @@ export function VideoPreview({
   const [recording, setRecording] = useState(false);
   const [recordDone, setRecordDone] = useState(false);
   const [renderProgress, setRenderProgress] = useState<number | null>(null);
+  const [renderMessage, setRenderMessage] = useState("Rendering video...");
 
   if (items.length === 0) return null;
 
@@ -113,6 +213,7 @@ export function VideoPreview({
     setRecording(true);
     setRecordDone(false);
     setRenderProgress(0);
+    setRenderMessage("Rendering video...");
 
     try {
       const { canRenderMediaOnWeb, renderMediaOnWeb } = await import(
@@ -129,21 +230,21 @@ export function VideoPreview({
         defaultProps: renderInputProps,
       };
 
-      const mp4Support = await canRenderMediaOnWeb({
-        container: "mp4",
-        videoCodec: "h264",
-        audioCodec: audioUrl ? "aac" : null,
+      const webmSupport = await canRenderMediaOnWeb({
+        container: "webm",
+        videoCodec: "vp9",
+        audioCodec: audioUrl ? "opus" : null,
         width: VIDEO_WIDTH,
         height: VIDEO_HEIGHT,
         muted: !audioUrl,
         outputTarget: "arraybuffer",
       });
 
-      const webmSupport = !mp4Support.canRender
+      const mp4Support = !webmSupport.canRender
         ? await canRenderMediaOnWeb({
-            container: "webm",
-            videoCodec: "vp9",
-            audioCodec: audioUrl ? "opus" : null,
+            container: "mp4",
+            videoCodec: "h264",
+            audioCodec: audioUrl ? "aac" : null,
             width: VIDEO_WIDTH,
             height: VIDEO_HEIGHT,
             muted: !audioUrl,
@@ -151,28 +252,28 @@ export function VideoPreview({
           })
         : null;
 
-      if (!mp4Support.canRender && !webmSupport?.canRender) {
+      if (!webmSupport.canRender && !mp4Support?.canRender) {
         await requestServerRender();
         setRecordDone(true);
         return;
       }
 
-      const format = mp4Support.canRender
+      const format = webmSupport.canRender
         ? {
-            container: "mp4" as const,
-            videoCodec: mp4Support.resolvedVideoCodec ?? "h264",
-            audioCodec: audioUrl
-              ? (mp4Support.resolvedAudioCodec ?? "aac")
-              : undefined,
-            filename: `${safeSlug}-hq.mp4`,
-          }
-        : {
             container: "webm" as const,
-            videoCodec: webmSupport?.resolvedVideoCodec ?? "vp9",
+            videoCodec: webmSupport.resolvedVideoCodec ?? "vp9",
             audioCodec: audioUrl
-              ? (webmSupport?.resolvedAudioCodec ?? "opus")
+              ? (webmSupport.resolvedAudioCodec ?? "opus")
               : undefined,
             filename: `${safeSlug}-hq.webm`,
+          }
+        : {
+            container: "mp4" as const,
+            videoCodec: mp4Support?.resolvedVideoCodec ?? "h264",
+            audioCodec: audioUrl
+              ? (mp4Support?.resolvedAudioCodec ?? "aac")
+              : undefined,
+            filename: `${safeSlug}-hq.mp4`,
           };
 
       const { getBlob } = await renderMediaOnWeb({
@@ -188,26 +289,61 @@ export function VideoPreview({
         scale: 1,
         logLevel: "error",
         onProgress: (progress) => {
-          setRenderProgress(progress.progress);
+          setRenderProgress(format.container === "webm" ? progress.progress * 0.65 : progress.progress);
         },
       });
 
-      const blob = await getBlob();
-      downloadBlob(blob, format.filename);
+      const renderedBlob = await getBlob();
+
+      if (format.container === "webm") {
+        try {
+          setRenderMessage("Converting to MP4...");
+          const mp4Blob = await transcodeWebmToMp4(
+            renderedBlob,
+            Boolean(audioUrl),
+            (progress) => {
+              setRenderProgress(0.65 + progress * 0.35);
+            }
+          );
+          downloadBlob(mp4Blob, `${safeSlug}-hq.mp4`);
+        } catch (transcodeError) {
+          try {
+            await requestServerRender();
+          } catch (serverRenderError) {
+            console.error(transcodeError);
+            console.error(serverRenderError);
+            downloadBlob(renderedBlob, format.filename);
+            alert(
+              "MP4 conversion failed, so a WebM video was downloaded instead."
+            );
+          }
+        }
+      } else {
+        downloadBlob(renderedBlob, format.filename);
+      }
+
       setRecordDone(true);
     } catch (browserRenderError) {
       try {
+        setRenderMessage("Trying server render...");
         await requestServerRender();
         setRecordDone(true);
       } catch (serverRenderError) {
         console.error(browserRenderError);
         console.error(serverRenderError);
-        alert("Failed to render video. Try the latest Chrome or Safari and try again.");
+        alert(
+          `Failed to download video: ${getErrorMessage(serverRenderError)}`
+        );
       }
     } finally {
       setRenderProgress(null);
-      setRecording(false);
+      setRecordMessageAndCleanup();
     }
+  }
+
+  function setRecordMessageAndCleanup() {
+    setRenderMessage("Rendering video...");
+    setRecording(false);
   }
 
 
@@ -241,17 +377,17 @@ export function VideoPreview({
         {recording ? (
           <>
             <span className="w-3 h-3 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-            Rendering {renderProgress !== null ? `${Math.round(renderProgress * 100)}%` : "video..."}
+            {renderMessage} {renderProgress !== null ? `${Math.round(renderProgress * 100)}%` : ""}
           </>
         ) : recordDone ? (
           "Saved! Click to render again"
         ) : (
-          "Download Video"
+          "Download MP4"
         )}
       </button>
       {!recording && !recordDone && (
         <p className="text-[11px] text-zinc-400 text-center">
-          Renders in your browser first for hosted compatibility, then downloads automatically.
+          Tries browser render first, then converts to MP4 in-browser for a hosted-safe download.
         </p>
       )}
     </div>
