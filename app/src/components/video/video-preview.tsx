@@ -1,9 +1,9 @@
 /**
- * VideoPreview — Remotion Player wrapper (9:16 portrait) with Save Video.
+ * VideoPreview — Remotion Player wrapper (9:16 portrait) with Download Video.
  *
- * "Save Video" uses the browser MediaRecorder API to capture the video
- * element's stream while it plays, then downloads the result as .webm.
- * Quality is equivalent to screen recording — fast and no server needed.
+ * Hosted environments like Netlify are not a reliable place to run a full
+ * Remotion server render, so we render in the browser first using Remotion's
+ * web renderer and only fall back to the legacy API route if needed.
  */
 "use client";
 
@@ -18,6 +18,7 @@ import {
   calculateDuration,
 } from "@/lib/video-config";
 import { AudioTimingMapping } from "@/lib/audio-alignment";
+import { downloadBlob } from "@/lib/export";
 
 interface VideoPreviewProps {
   items: Item[];
@@ -37,9 +38,9 @@ export function VideoPreview({
   timings,
 }: VideoPreviewProps) {
   const playerRef = useRef<PlayerRef>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
   const [recording, setRecording] = useState(false);
   const [recordDone, setRecordDone] = useState(false);
+  const [renderProgress, setRenderProgress] = useState<number | null>(null);
 
   if (items.length === 0) return null;
 
@@ -48,64 +49,149 @@ export function VideoPreview({
     const totalSecs = timings.introSeconds + timings.itemSeconds.reduce((a, b) => a + b, 0) + timings.ctaSeconds;
     durationInFrames = Math.round(totalSecs * VIDEO_FPS);
   }
-  
-  const durationMs = (durationInFrames / VIDEO_FPS) * 1000;
+
+  const inputProps = {
+    items,
+    roomType,
+    budgetPhrase,
+    roomImageUrl,
+    audioUrl,
+    timings,
+  };
+
+  const safeSlug = roomType.toLowerCase().replace(/\s+/g, "-");
+
+  async function requestServerRender() {
+    const res = await fetch("/api/render-mp4", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(inputProps),
+    });
+
+    if (!res.ok) {
+      throw new Error(await res.text());
+    }
+
+    const blob = await res.blob();
+    let filename = `${safeSlug}-hq.mp4`;
+    const disposition = res.headers.get("Content-Disposition");
+    if (disposition && disposition.includes("filename=")) {
+      filename = disposition.split("filename=")[1].replace(/"/g, "");
+    }
+
+    downloadBlob(blob, filename);
+  }
 
   async function handleSaveVideo() {
     if (recording) return;
     setRecording(true);
     setRecordDone(false);
+    setRenderProgress(0);
 
     try {
-      const res = await fetch("/api/render-mp4", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          items,
-          roomType,
-          budgetPhrase,
-          roomImageUrl,
-          audioUrl,
-          timings,
-        }),
+      const { canRenderMediaOnWeb, renderMediaOnWeb } = await import(
+        "@remotion/web-renderer"
+      );
+
+      const composition = {
+        id: "Reel",
+        component: ReelComposition,
+        width: VIDEO_WIDTH,
+        height: VIDEO_HEIGHT,
+        fps: VIDEO_FPS,
+        durationInFrames,
+        defaultProps: inputProps,
+      };
+
+      const mp4Support = await canRenderMediaOnWeb({
+        container: "mp4",
+        videoCodec: "h264",
+        audioCodec: audioUrl ? "aac" : null,
+        width: VIDEO_WIDTH,
+        height: VIDEO_HEIGHT,
+        muted: !audioUrl,
+        outputTarget: "arraybuffer",
       });
 
-      if (!res.ok) {
-        throw new Error(await res.text());
+      const webmSupport = !mp4Support.canRender
+        ? await canRenderMediaOnWeb({
+            container: "webm",
+            videoCodec: "vp9",
+            audioCodec: audioUrl ? "opus" : null,
+            width: VIDEO_WIDTH,
+            height: VIDEO_HEIGHT,
+            muted: !audioUrl,
+            outputTarget: "arraybuffer",
+          })
+        : null;
+
+      if (!mp4Support.canRender && !webmSupport?.canRender) {
+        await requestServerRender();
+        setRecordDone(true);
+        return;
       }
 
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      // Get filename from header or fallback
-      let filename = `${roomType.toLowerCase().replace(/\s+/g, "-")}-hq.mp4`;
-      const disposition = res.headers.get("Content-Disposition");
-      if (disposition && disposition.indexOf("filename=") !== -1) {
-        filename = disposition.split("filename=")[1].replace(/"/g, "");
-      }
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      const format = mp4Support.canRender
+        ? {
+            container: "mp4" as const,
+            videoCodec: mp4Support.resolvedVideoCodec ?? "h264",
+            audioCodec: audioUrl
+              ? (mp4Support.resolvedAudioCodec ?? "aac")
+              : undefined,
+            filename: `${safeSlug}-hq.mp4`,
+          }
+        : {
+            container: "webm" as const,
+            videoCodec: webmSupport?.resolvedVideoCodec ?? "vp9",
+            audioCodec: audioUrl
+              ? (webmSupport?.resolvedAudioCodec ?? "opus")
+              : undefined,
+            filename: `${safeSlug}-hq.webm`,
+          };
+
+      const { getBlob } = await renderMediaOnWeb({
+        composition,
+        inputProps,
+        container: format.container,
+        videoCodec: format.videoCodec,
+        audioCodec: format.audioCodec,
+        muted: !audioUrl,
+        outputTarget: "arraybuffer",
+        audioBitrate: "medium",
+        videoBitrate: "medium",
+        scale: 1,
+        logLevel: "error",
+        onProgress: (progress) => {
+          setRenderProgress(progress.progress);
+        },
+      });
+
+      const blob = await getBlob();
+      downloadBlob(blob, format.filename);
       setRecordDone(true);
-    } catch (err: any) {
-      console.error(err);
-      alert("Failed to render video on the server.");
+    } catch (browserRenderError) {
+      try {
+        await requestServerRender();
+        setRecordDone(true);
+      } catch (serverRenderError) {
+        console.error(browserRenderError);
+        console.error(serverRenderError);
+        alert("Failed to render video. Try the latest Chrome or Safari and try again.");
+      }
     } finally {
+      setRenderProgress(null);
       setRecording(false);
     }
   }
 
 
   return (
-    <div className="space-y-3" ref={containerRef}>
+    <div className="space-y-3">
       <div className="rounded-xl overflow-hidden border border-zinc-200 bg-black">
         <Player
           ref={playerRef}
           component={ReelComposition}
-          inputProps={{ items, roomType, budgetPhrase, roomImageUrl, audioUrl, timings }}
+          inputProps={inputProps}
           durationInFrames={durationInFrames}
           compositionWidth={VIDEO_WIDTH}
           compositionHeight={VIDEO_HEIGHT}
@@ -129,20 +215,19 @@ export function VideoPreview({
         {recording ? (
           <>
             <span className="w-3 h-3 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-            Rendering MP4 Server-Side (~20s)
+            Rendering {renderProgress !== null ? `${Math.round(renderProgress * 100)}%` : "video..."}
           </>
         ) : recordDone ? (
-          "✅ Saved Directly! Click to render again"
+          "Saved! Click to render again"
         ) : (
-          "⬇ Render Direct HQ MP4"
+          "Download Video"
         )}
       </button>
       {!recording && !recordDone && (
         <p className="text-[11px] text-zinc-400 text-center">
-          Downloads a clean H.264 MP4 file directly from the backend.
+          Renders in your browser first for hosted compatibility, then downloads automatically.
         </p>
       )}
     </div>
   );
 }
-
