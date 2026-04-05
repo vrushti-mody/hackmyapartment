@@ -8,6 +8,8 @@ import os from "os";
 // We cache the bundle path in memory because bundling takes a few seconds.
 // This makes subsequent renders MUCH faster.
 let cachedBundleUrl: string | null = null;
+const remotionTempRoot = path.join(os.tmpdir(), "hackmyapartment-remotion");
+const remotionBundleDir = path.join(remotionTempRoot, "bundle");
 
 interface RenderItemPayload {
   imageUrl?: string;
@@ -38,6 +40,22 @@ function toProxyUrl(origin: string, url?: string) {
   return url;
 }
 
+async function ensureWritableRemotionPaths() {
+  await fs.promises.mkdir(remotionTempRoot, { recursive: true });
+  await fs.promises.mkdir(remotionBundleDir, { recursive: true });
+}
+
+async function withWritableRemotionCwd<T>(fn: () => Promise<T>) {
+  const previousCwd = process.cwd();
+  process.chdir(remotionTempRoot);
+
+  try {
+    return await fn();
+  } finally {
+    process.chdir(previousCwd);
+  }
+}
+
 export const maxDuration = 60; // Next.js serverless timeout for API routes (60s limit is typical on Hobby, but local isn't affected)
 
 export async function POST(req: NextRequest) {
@@ -45,25 +63,30 @@ export async function POST(req: NextRequest) {
     const body = (await req.json()) as RenderRequestBody;
     const { items = [], roomType = "room", roomImageUrl, audioUrl } = body;
 
+    await ensureWritableRemotionPaths();
+
     // Ensure we have a valid bundle
-    // We override cachedBundleUrl intentionally to flush the old proxy bug out of memory
-    console.log("Bundling Remotion composition...");
-    const entryPoint = path.join(process.cwd(), "src/remotion/index.ts");
-    cachedBundleUrl = await bundle({
-      entryPoint,
-      webpackOverride: (config) => {
-        return {
-          ...config,
-          resolve: {
-            ...config.resolve,
-            alias: {
-              ...(config.resolve?.alias ?? {}),
-              "@": path.resolve(process.cwd(), "src"),
+    if (!cachedBundleUrl || !fs.existsSync(cachedBundleUrl)) {
+      console.log("Bundling Remotion composition...");
+      const entryPoint = path.join(process.cwd(), "src/remotion/index.ts");
+      cachedBundleUrl = await bundle({
+        entryPoint,
+        outDir: remotionBundleDir,
+        enableCaching: false,
+        webpackOverride: (config) => {
+          return {
+            ...config,
+            resolve: {
+              ...config.resolve,
+              alias: {
+                ...(config.resolve?.alias ?? {}),
+                "@": path.resolve(process.cwd(), "src"),
+              },
             },
-          },
-        };
-      },
-    });
+          };
+        },
+      });
+    }
 
     // Map all images through the secure Next.js interceptor with ABSOLUTE urls.
     // This solves Amazon Bot-blocks AND stops Remotion trying to fetch from Port 3001.
@@ -81,7 +104,20 @@ export async function POST(req: NextRequest) {
     };
 
     // Verify composition exists
-    const compositions = await getCompositions(cachedBundleUrl, { inputProps: safeBody });
+    const compositions = await withWritableRemotionCwd(() =>
+      getCompositions(cachedBundleUrl!, {
+        inputProps: safeBody,
+        chromeMode: "headless-shell",
+        onBrowserDownload: ({ chromeMode }) => ({
+          version: null,
+          onProgress: ({ percent }) => {
+            console.log(
+              `Downloading ${chromeMode} for Remotion: ${Math.round(percent)}%`
+            );
+          },
+        }),
+      })
+    );
     const video = compositions.find((c) => c.id === "Reel");
     if (!video) throw new Error("No composition 'Reel' found");
 
@@ -89,18 +125,29 @@ export async function POST(req: NextRequest) {
     console.log("Rendering MP4...");
     const outputLocation = path.join(os.tmpdir(), `reel-${Date.now()}.mp4`);
     
-    await renderMedia({
-      composition: video,
-      serveUrl: cachedBundleUrl,
-      outputLocation,
-      inputProps: {
-        ...safeBody,
-      },
-      codec: "h264",
-      imageFormat: "jpeg",
-      audioCodec: audioUrl ? "aac" : undefined, 
-      jpegQuality: 75,
-    });
+    await withWritableRemotionCwd(() =>
+      renderMedia({
+        composition: video,
+        serveUrl: cachedBundleUrl!,
+        outputLocation,
+        inputProps: {
+          ...safeBody,
+        },
+        codec: "h264",
+        imageFormat: "jpeg",
+        audioCodec: audioUrl ? "aac" : undefined,
+        jpegQuality: 75,
+        chromeMode: "headless-shell",
+        onBrowserDownload: ({ chromeMode }) => ({
+          version: null,
+          onProgress: ({ percent }) => {
+            console.log(
+              `Downloading ${chromeMode} for Remotion: ${Math.round(percent)}%`
+            );
+          },
+        }),
+      })
+    );
     console.log("Finished rendering:", outputLocation);
 
     // Read the MP4 buffer and delete the temp file

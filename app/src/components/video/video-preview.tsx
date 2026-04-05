@@ -33,6 +33,9 @@ function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "Unknown error";
 }
 
+const remotionPublicLicenseKey =
+  process.env.NEXT_PUBLIC_REMOTION_LICENSE_KEY?.trim() || "free-license";
+
 type FFmpegProgressListener = (progress: number) => void;
 
 let ffmpegPromise: Promise<{
@@ -288,6 +291,7 @@ export function VideoPreview({
         videoBitrate: "medium",
         scale: 1,
         logLevel: "error",
+        licenseKey: remotionPublicLicenseKey,
         onProgress: (progress) => {
           setRenderProgress(format.container === "webm" ? progress.progress * 0.65 : progress.progress);
         },
@@ -365,6 +369,7 @@ export function VideoPreview({
           }}
           controls
           autoPlay={false}
+          acknowledgeRemotionLicense
         />
       </div>
 
