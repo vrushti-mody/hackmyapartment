@@ -320,6 +320,7 @@ export function LivePreview({
                 roomImageUrl={roomImageUrl}
                 audioUrl={audioUrl}
                 timings={audioTimings}
+                theme={theme}
               />
             </div>
           </div>

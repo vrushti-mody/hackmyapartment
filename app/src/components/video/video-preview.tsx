@@ -27,6 +27,7 @@ interface VideoPreviewProps {
   roomImageUrl?: string;
   audioUrl?: string;
   timings?: AudioTimingMapping | null;
+  theme?: string;
 }
 
 function getErrorMessage(error: unknown): string {
@@ -155,6 +156,7 @@ export function VideoPreview({
   roomImageUrl,
   audioUrl,
   timings,
+  theme,
 }: VideoPreviewProps) {
   const playerRef = useRef<PlayerRef>(null);
   const [recording, setRecording] = useState(false);
@@ -177,6 +179,7 @@ export function VideoPreview({
     roomImageUrl,
     audioUrl,
     timings,
+    theme,
   };
 
   const renderInputProps: ReelCompositionProps = {

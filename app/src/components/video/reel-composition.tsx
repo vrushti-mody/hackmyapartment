@@ -37,6 +37,7 @@ export interface ReelCompositionProps extends Record<string, unknown> {
   roomImageUrl?: string;
   audioUrl?: string;
   timings?: Record<string, any> | null;
+  theme?: string;
 }
 
 const ROOM_FALLBACKS: Record<string, string[]> = {
@@ -110,17 +111,20 @@ function KenBurnsBackground({ roomImageUrl, seed, roomType }: { roomImageUrl?: s
 function IntroSlide({
   roomType,
   budgetPhrase,
+  theme,
 }: {
   roomType: string;
   budgetPhrase: string;
+  theme?: string;
 }) {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
   // Aggressive overshooting bounces
   const titleSpring = spring({ frame, fps, config: { damping: 10, mass: 1, stiffness: 200 } });
+  const themeSpring = spring({ frame: frame - 4, fps, config: { damping: 10, mass: 1, stiffness: 200 } });
   const subtitleSpring = spring({
-    frame: frame - 8,
+    frame: frame - 10,
     fps,
     config: { damping: 10, mass: 1, stiffness: 200 },
   });
@@ -149,6 +153,34 @@ function IntroSlide({
           Let's Build a{"\n"}{roomType}
         </div>
       </div>
+      
+      {theme && (
+        <div
+          style={{
+            transform: `scale(${themeSpring}) rotate(2deg)`,
+            marginTop: 20,
+            textAlign: "center",
+          }}
+        >
+          <div
+            style={{
+              fontSize: 48,
+              fontWeight: 900,
+              textTransform: "uppercase",
+              color: "black",
+              background: "#34d399", // Neon Mint
+              padding: "10px 32px",
+              borderRadius: 100,
+              border: "6px solid black",
+              boxShadow: "6px 6px 0px #000",
+              letterSpacing: "-0.02em"
+            }}
+          >
+            {theme} Vibe
+          </div>
+        </div>
+      )}
+
       <div
         style={{
           transform: `scale(${subtitleSpring}) rotate(-2deg)`,
@@ -473,6 +505,7 @@ export function ReelComposition({
   roomImageUrl,
   audioUrl,
   timings,
+  theme,
 }: ReelCompositionProps) {
   const { fps } = useVideoConfig();
 
@@ -492,7 +525,7 @@ export function ReelComposition({
 
   const introSlide = (
     <Sequence from={currentFrame} durationInFrames={introFrames}>
-      <IntroSlide roomType={roomType} budgetPhrase={budgetPhrase} />
+      <IntroSlide roomType={roomType} budgetPhrase={budgetPhrase} theme={theme} />
     </Sequence>
   );
   currentFrame += introFrames;
