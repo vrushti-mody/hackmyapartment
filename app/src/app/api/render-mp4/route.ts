@@ -9,23 +9,41 @@ import os from "os";
 // This makes subsequent renders MUCH faster.
 let cachedBundleUrl: string | null = null;
 
+interface RenderItemPayload {
+  imageUrl?: string;
+  [key: string]: unknown;
+}
+
+interface RenderRequestBody {
+  items?: RenderItemPayload[];
+  roomType?: string;
+  roomImageUrl?: string;
+  audioUrl?: string;
+}
+
+function toProxyUrl(origin: string, url?: string) {
+  if (!url) return url;
+  if (
+    url.startsWith("data:") ||
+    url.startsWith("blob:") ||
+    url.startsWith("/api/proxy-image?")
+  ) {
+    return url;
+  }
+
+  if (/^https?:\/\//i.test(url)) {
+    return `${origin}/api/proxy-image?url=${encodeURIComponent(url)}`;
+  }
+
+  return url;
+}
+
 export const maxDuration = 60; // Next.js serverless timeout for API routes (60s limit is typical on Hobby, but local isn't affected)
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { items, roomType, budgetPhrase, roomImageUrl, audioUrl, timings } = body;
-
-    // Determine the duration dynamically based on timings or fallback logic
-    let durationInFrames = 600; // default 20s
-    if (timings) {
-      const totalSecs = timings.introSeconds + timings.itemSeconds.reduce((a: number, b: number) => a + b, 0) + timings.ctaSeconds;
-      durationInFrames = Math.round(totalSecs * 30); // VIDEO_FPS = 30
-    } else if (items?.length) {
-      // 3.5s intro, 5s per item, 4s hook, 1.5s padding
-      const secs = 3.5 + items.length * 5 + 4 + 1.5;
-      durationInFrames = Math.round(secs * 30);
-    }
+    const body = (await req.json()) as RenderRequestBody;
+    const { items = [], roomType = "room", roomImageUrl, audioUrl } = body;
 
     // Ensure we have a valid bundle
     // We override cachedBundleUrl intentionally to flush the old proxy bug out of memory
@@ -49,11 +67,9 @@ export async function POST(req: NextRequest) {
 
     // Map all images through the secure Next.js interceptor with ABSOLUTE urls.
     // This solves Amazon Bot-blocks AND stops Remotion trying to fetch from Port 3001.
-    const mappedItems = items.map((item: any) => ({
+    const mappedItems = items.map((item) => ({
       ...item,
-      imageUrl: item.imageUrl
-        ? `${req.nextUrl.origin}/api/proxy-image?url=${encodeURIComponent(item.imageUrl)}`
-        : item.imageUrl,
+      imageUrl: toProxyUrl(req.nextUrl.origin, item.imageUrl),
     }));
 
     // Strip local browser blob URLs from the backend render payload!
@@ -61,6 +77,7 @@ export async function POST(req: NextRequest) {
     const safeBody = {
       ...body,
       items: mappedItems,
+      roomImageUrl: toProxyUrl(req.nextUrl.origin, roomImageUrl),
     };
 
     // Verify composition exists
@@ -99,8 +116,10 @@ export async function POST(req: NextRequest) {
       },
     });
 
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Renderer error:", err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    const message =
+      err instanceof Error ? err.message : "Unknown video rendering error";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

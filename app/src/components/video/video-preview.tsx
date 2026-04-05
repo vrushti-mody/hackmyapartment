@@ -9,7 +9,7 @@
 
 import { useRef, useState } from "react";
 import { Player, PlayerRef } from "@remotion/player";
-import { ReelComposition } from "./reel-composition";
+import { ReelComposition, type ReelCompositionProps } from "./reel-composition";
 import { Item } from "@/lib/types";
 import {
   VIDEO_WIDTH,
@@ -27,6 +27,23 @@ interface VideoPreviewProps {
   roomImageUrl?: string;
   audioUrl?: string;
   timings?: AudioTimingMapping | null;
+}
+
+function toRenderSafeAssetUrl(url: string): string {
+  if (
+    url.startsWith("data:") ||
+    url.startsWith("blob:") ||
+    url.startsWith("/") ||
+    url.includes("/api/proxy-image?")
+  ) {
+    return url;
+  }
+
+  if (/^https?:\/\//i.test(url) && typeof window !== "undefined") {
+    return `${window.location.origin}/api/proxy-image?url=${encodeURIComponent(url)}`;
+  }
+
+  return url;
 }
 
 export function VideoPreview({
@@ -50,7 +67,7 @@ export function VideoPreview({
     durationInFrames = Math.round(totalSecs * VIDEO_FPS);
   }
 
-  const inputProps = {
+  const previewProps: ReelCompositionProps = {
     items,
     roomType,
     budgetPhrase,
@@ -59,13 +76,22 @@ export function VideoPreview({
     timings,
   };
 
+  const renderInputProps: ReelCompositionProps = {
+    ...previewProps,
+    roomImageUrl: roomImageUrl ? toRenderSafeAssetUrl(roomImageUrl) : undefined,
+    items: items.map((item) => ({
+      ...item,
+      imageUrl: toRenderSafeAssetUrl(item.imageUrl),
+    })),
+  };
+
   const safeSlug = roomType.toLowerCase().replace(/\s+/g, "-");
 
   async function requestServerRender() {
     const res = await fetch("/api/render-mp4", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(inputProps),
+      body: JSON.stringify(previewProps),
     });
 
     if (!res.ok) {
@@ -100,7 +126,7 @@ export function VideoPreview({
         height: VIDEO_HEIGHT,
         fps: VIDEO_FPS,
         durationInFrames,
-        defaultProps: inputProps,
+        defaultProps: renderInputProps,
       };
 
       const mp4Support = await canRenderMediaOnWeb({
@@ -151,7 +177,7 @@ export function VideoPreview({
 
       const { getBlob } = await renderMediaOnWeb({
         composition,
-        inputProps,
+        inputProps: renderInputProps,
         container: format.container,
         videoCodec: format.videoCodec,
         audioCodec: format.audioCodec,
@@ -191,7 +217,7 @@ export function VideoPreview({
         <Player
           ref={playerRef}
           component={ReelComposition}
-          inputProps={inputProps}
+          inputProps={previewProps}
           durationInFrames={durationInFrames}
           compositionWidth={VIDEO_WIDTH}
           compositionHeight={VIDEO_HEIGHT}
