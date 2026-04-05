@@ -182,6 +182,7 @@ export function VideoPreview({
   const renderInputProps: ReelCompositionProps = {
     ...previewProps,
     roomImageUrl: roomImageUrl ? toRenderSafeAssetUrl(roomImageUrl) : undefined,
+    audioUrl: audioUrl ? toRenderSafeAssetUrl(audioUrl) : undefined,
     items: items.map((item) => ({
       ...item,
       imageUrl: toRenderSafeAssetUrl(item.imageUrl),
