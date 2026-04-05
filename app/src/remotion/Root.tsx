@@ -3,7 +3,6 @@ import type { AnyZodObject } from "remotion";
 import { ReelComposition } from "../components/video/reel-composition";
 import { ReelCompositionProps } from "../components/video/reel-composition";
 import { VIDEO_WIDTH, VIDEO_HEIGHT, VIDEO_FPS } from "../lib/video-config";
-import "../app/globals.css"; // Ensure global Tailwind styles are loaded
 
 const defaultReelProps: ReelCompositionProps = {
   items: [],
