@@ -1,6 +1,12 @@
 import mongoose from "mongoose";
 
-const MONGODB_URI = process.env.MONGODB_URI;
+const MONGODB_URI = String(process.env.MONGODB_URI || "")
+  .trim()
+  .replace(/^['"]|['"]$/g, "")
+  .replace(
+    /\$\{MONGODB_PASSWORD\}/g,
+    String(process.env.MONGODB_PASSWORD || "").trim()
+  );
 
 /**
  * Global is used here to maintain a cached connection across hot reloads

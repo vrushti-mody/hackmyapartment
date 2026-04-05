@@ -10,6 +10,8 @@ import { HorizontalCarousel } from "@/components/shop/horizontal-carousel";
 import { getEpisodes, getAllProducts, getRoomGradient, type ProductWithEpisode } from "@/lib/store-service";
 import { Episode } from "@/lib/types";
 
+const INSTAGRAM_URL = "https://www.instagram.com/hackmyapartment/";
+
 function BundleCarouselCard({ episode }: { episode: Episode }) {
   const total = episode.items.reduce((s, i) => s + i.amount, 0);
   const theme = episode.theme?.trim();
@@ -91,7 +93,14 @@ export default function ShopHomePage() {
 
       {/* Hero */}
       <div className="max-w-6xl mx-auto px-4 pt-12 pb-10 text-center">
-        <p className="text-xs font-semibold text-zinc-400 uppercase tracking-widest mb-3">@hackmyapartment</p>
+        <a
+          href={INSTAGRAM_URL}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex text-xs font-semibold text-zinc-400 uppercase tracking-widest mb-3 hover:text-zinc-600 transition"
+        >
+          @hackmyapartment
+        </a>
         <h1 className="text-3xl sm:text-4xl font-bold text-zinc-900 leading-tight mb-3">
           Apartment upgrades on a budget
         </h1>
@@ -128,7 +137,16 @@ export default function ShopHomePage() {
 
       {/* Footer */}
       <footer className="border-t border-zinc-100 py-8 text-center text-sm text-zinc-400">
-        <p className="font-medium text-zinc-600 mb-1">@hackmyapartment</p>
+        <p className="mb-1">
+          <a
+            href={INSTAGRAM_URL}
+            target="_blank"
+            rel="noreferrer"
+            className="font-medium text-zinc-600 hover:text-zinc-900 transition"
+          >
+            @hackmyapartment
+          </a>
+        </p>
         <p>Affordable home upgrades, one reel at a time.</p>
       </footer>
     </div>
