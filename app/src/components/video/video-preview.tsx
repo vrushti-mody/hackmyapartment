@@ -333,10 +333,10 @@ export function VideoPreview({
         await requestServerRender();
         setRecordDone(true);
       } catch (serverRenderError) {
-        console.error(browserRenderError);
-        console.error(serverRenderError);
+        console.error("Browser render error:", browserRenderError);
+        console.error("Server render error:", serverRenderError);
         alert(
-          `Failed to download video: ${getErrorMessage(serverRenderError)}`
+          `Browser render failed: ${getErrorMessage(browserRenderError)}\n\nServer fallback failed: ${getErrorMessage(serverRenderError)}`
         );
       }
     } finally {
