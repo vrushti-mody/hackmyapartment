@@ -11,8 +11,8 @@ import type { CSSProperties } from "react";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "HackMyApartment — Reel Generator",
-  description: "Automate Instagram Reel creation for affordable home decor content",
+  title: "HackMyApartment",
+  description: "Affordable home upgrades, one reel at a time.",
 };
 
 const fontVariables = {
