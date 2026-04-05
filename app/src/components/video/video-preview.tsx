@@ -132,21 +132,18 @@ async function transcodeWebmToMp4(
   }
 }
 
-function toRenderSafeAssetUrl(url: string): string {
-  if (
-    url.startsWith("data:") ||
-    url.startsWith("blob:") ||
-    url.startsWith("/") ||
-    url.includes("/api/proxy-image?")
-  ) {
-    return url;
-  }
+/** Fetch any external URL through the CORS proxy and return a unique blob: URL. */
+async function fetchAsBlob(url: string): Promise<string> {
+  if (url.startsWith("blob:") || url.startsWith("data:")) return url;
 
-  if (/^https?:\/\//i.test(url) && typeof window !== "undefined") {
-    return `${window.location.origin}/api/proxy-image?url=${encodeURIComponent(url)}`;
-  }
+  const proxyUrl = url.startsWith("/") || url.includes("/api/proxy-image?")
+    ? url
+    : `${window.location.origin}/api/proxy-image?url=${encodeURIComponent(url)}`;
 
-  return url;
+  const res = await fetch(proxyUrl, { cache: "no-store" });
+  if (!res.ok) throw new Error(`Failed to fetch asset: ${res.status}`);
+  const blob = await res.blob();
+  return URL.createObjectURL(blob);
 }
 
 export function VideoPreview({
@@ -163,6 +160,8 @@ export function VideoPreview({
   const [recordDone, setRecordDone] = useState(false);
   const [renderProgress, setRenderProgress] = useState<number | null>(null);
   const [renderMessage, setRenderMessage] = useState("Rendering video...");
+  // Track pre-fetched blob URLs so we can revoke them after rendering
+  const blobUrlsRef = useRef<string[]>([]);
 
   if (items.length === 0) return null;
 
@@ -182,17 +181,38 @@ export function VideoPreview({
     theme,
   };
 
-  const renderInputProps: ReelCompositionProps = {
-    ...previewProps,
-    roomImageUrl: roomImageUrl ? toRenderSafeAssetUrl(roomImageUrl) : undefined,
-    audioUrl: audioUrl ? toRenderSafeAssetUrl(audioUrl) : undefined,
-    items: items.map((item) => ({
-      ...item,
-      imageUrl: toRenderSafeAssetUrl(item.imageUrl),
-    })),
-  };
-
   const safeSlug = roomType.toLowerCase().replace(/\s+/g, "-");
+
+  /** Pre-fetch every image to a unique blob URL so Remotion can't mix them up. */
+  async function buildRenderInputProps(): Promise<ReelCompositionProps> {
+    // Revoke any previously created blob URLs
+    blobUrlsRef.current.forEach((u) => URL.revokeObjectURL(u));
+    blobUrlsRef.current = [];
+
+    const track = (url: string) => {
+      blobUrlsRef.current.push(url);
+      return url;
+    };
+
+    const [roomBlob, audioBlob, ...itemBlobs] = await Promise.all([
+      roomImageUrl ? fetchAsBlob(roomImageUrl).then(track) : Promise.resolve(undefined),
+      audioUrl ? Promise.resolve(audioUrl) : Promise.resolve(undefined), // audio is already a blob:
+      ...items.map((item) =>
+        item.imageUrl ? fetchAsBlob(item.imageUrl).then(track) : Promise.resolve("")
+      ),
+    ]);
+
+    return {
+      ...previewProps,
+      roomImageUrl: roomBlob,
+      audioUrl: audioBlob,
+      items: items.map((item, i) => ({
+        ...item,
+        imageUrl: itemBlobs[i] || item.imageUrl,
+      })),
+    };
+  }
+
 
   async function requestServerRender() {
     const res = await fetch("/api/render-mp4", {
@@ -220,12 +240,19 @@ export function VideoPreview({
     setRecording(true);
     setRecordDone(false);
     setRenderProgress(0);
-    setRenderMessage("Rendering video...");
+    setRenderMessage("Fetching images...");
 
     try {
       const { canRenderMediaOnWeb, renderMediaOnWeb } = await import(
         "@remotion/web-renderer"
       );
+
+      // Pre-fetch every image to a unique blob URL BEFORE passing to Remotion.
+      // This prevents Remotion's internal URL cache from collapsing all product
+      // images to the first one it fetched.
+      setRenderMessage("Loading assets...");
+      const resolvedProps = await buildRenderInputProps();
+      setRenderMessage("Rendering video...");
 
       const composition = {
         id: "Reel",
@@ -234,7 +261,7 @@ export function VideoPreview({
         height: VIDEO_HEIGHT,
         fps: VIDEO_FPS,
         durationInFrames,
-        defaultProps: renderInputProps,
+        defaultProps: resolvedProps,
       };
 
       const mp4Support = await canRenderMediaOnWeb({
@@ -285,7 +312,7 @@ export function VideoPreview({
 
       const { getBlob } = await renderMediaOnWeb({
         composition,
-        inputProps: renderInputProps,
+        inputProps: resolvedProps,
         container: format.container,
         videoCodec: format.videoCodec,
         audioCodec: format.audioCodec,
