@@ -5,6 +5,7 @@
  * Returns empty arrays when the database has no data yet.
  */
 import { Episode, Item } from "@/lib/types";
+import { getProductIdentityKey } from "@/lib/product-identity";
 
 /* ─── Gradient fallbacks for rooms without AI images ─── */
 const ROOM_GRADIENTS: Record<string, string> = {
@@ -91,7 +92,7 @@ export interface ProductWithEpisode extends Item {
 }
 
 function deriveProductsFromEpisodes(episodes: Episode[]): ProductWithEpisode[] {
-  const productsByAffiliateLink = new Map<string, ProductWithEpisode>();
+  const productsByIdentity = new Map<string, ProductWithEpisode>();
 
   for (const episode of episodes) {
     const bundle = {
@@ -103,10 +104,10 @@ function deriveProductsFromEpisodes(episodes: Episode[]): ProductWithEpisode[] {
     };
 
     for (const item of episode.items) {
-      const affiliateKey = item.affiliateLink.trim();
-      if (!affiliateKey) continue;
+      const identityKey = getProductIdentityKey(item);
+      if (!identityKey) continue;
 
-      const existing = productsByAffiliateLink.get(affiliateKey);
+      const existing = productsByIdentity.get(identityKey);
       if (existing) {
         if (!existing.bundles.some((b) => b.id === episode.id)) {
           existing.bundles.push(bundle);
@@ -114,7 +115,7 @@ function deriveProductsFromEpisodes(episodes: Episode[]): ProductWithEpisode[] {
         continue;
       }
 
-      productsByAffiliateLink.set(affiliateKey, {
+      productsByIdentity.set(identityKey, {
         ...item,
         bundles: [bundle],
         episodeId: episode.id,
@@ -125,7 +126,7 @@ function deriveProductsFromEpisodes(episodes: Episode[]): ProductWithEpisode[] {
     }
   }
 
-  return Array.from(productsByAffiliateLink.values());
+  return Array.from(productsByIdentity.values());
 }
 
 export async function getAllProducts(): Promise<ProductWithEpisode[]> {

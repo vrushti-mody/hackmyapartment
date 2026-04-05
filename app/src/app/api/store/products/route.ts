@@ -7,6 +7,7 @@ import {
   serializeProduct,
   toBundleSummary,
 } from "@/lib/db/store-utils";
+import { getProductIdentityKey, normalizeAffiliateLink } from "@/lib/product-identity";
 
 function isEmbeddedItem(value: unknown): value is {
   id?: string;
@@ -18,12 +19,6 @@ function isEmbeddedItem(value: unknown): value is {
   tags?: string[];
 } {
   return !!value && typeof value === "object" && "affiliateLink" in value;
-}
-
-function getAffiliateLink(value: unknown): string {
-  if (!value || typeof value !== "object") return "";
-  const maybeLink = (value as { affiliateLink?: unknown }).affiliateLink;
-  return typeof maybeLink === "string" ? maybeLink.trim() : "";
 }
 
 export async function GET() {
@@ -60,15 +55,16 @@ export async function GET() {
 
       for (const productObjectId of episode.items) {
         if (isEmbeddedItem(productObjectId)) {
-          const affiliateLink = String(productObjectId.affiliateLink || "").trim();
-          if (!affiliateLink || seenInBundle.has(affiliateLink)) continue;
+          const affiliateLink = normalizeAffiliateLink(productObjectId.affiliateLink);
+          const identityKey = getProductIdentityKey(productObjectId);
+          if (!identityKey || !affiliateLink || seenInBundle.has(identityKey)) continue;
 
-          seenInBundle.add(affiliateLink);
-          const existing = embeddedProducts.get(affiliateLink);
+          seenInBundle.add(identityKey);
+          const existing = embeddedProducts.get(identityKey);
           const nextBundleList = existing?.bundles || [];
           nextBundleList.push(bundle);
 
-          embeddedProducts.set(affiliateLink, {
+          embeddedProducts.set(identityKey, {
             id: String(productObjectId.id || affiliateLink),
             title: String(productObjectId.title || ""),
             description: String(productObjectId.description || ""),
@@ -104,19 +100,46 @@ export async function GET() {
         )
       );
 
-    const knownAffiliateLinks = new Set(
-      activeProducts.map((product) => getAffiliateLink(product))
-    );
+    const dedupedProducts = new Map<string, (typeof activeProducts)[number]>();
+
+    for (const product of activeProducts) {
+      const identityKey = getProductIdentityKey(
+        product as Record<string, unknown>
+      );
+      if (!identityKey) continue;
+
+      const existing = dedupedProducts.get(identityKey);
+      if (!existing) {
+        dedupedProducts.set(identityKey, product);
+        continue;
+      }
+
+      const mergedBundles = [...existing.bundles];
+      for (const bundle of product.bundles) {
+        if (!mergedBundles.some((candidate) => candidate.id === bundle.id)) {
+          mergedBundles.push(bundle);
+        }
+      }
+
+      existing.bundles = mergedBundles;
+    }
+
+    const knownIdentityKeys = new Set(dedupedProducts.keys());
 
     const fallbackProducts = Array.from(embeddedProducts.values())
-      .filter((product) => !knownAffiliateLinks.has(product.affiliateLink))
+      .filter(
+        (product) =>
+          !knownIdentityKeys.has(
+            getProductIdentityKey(product as Record<string, unknown>)
+          )
+      )
       .map((product) => ({
         ...product,
         episodeId: product.bundles[0]?.id || "",
         episodeRoomType: product.bundles[0]?.roomType || "",
       }));
 
-    return NextResponse.json([...activeProducts, ...fallbackProducts]);
+    return NextResponse.json([...dedupedProducts.values(), ...fallbackProducts]);
   } catch (error) {
     console.error("Error fetching products:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });

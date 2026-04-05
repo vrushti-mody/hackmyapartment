@@ -1,6 +1,11 @@
 import { randomUUID } from "crypto";
 import EpisodeModel from "@/lib/db/models/Episode";
 import ProductModel from "@/lib/db/models/Product";
+import {
+  getProductIdentityKey,
+  normalizeAffiliateLink,
+  normalizeProductTitle,
+} from "@/lib/product-identity";
 
 export interface BundleSummary {
   id: string;
@@ -17,10 +22,6 @@ type BundleSummarySource = {
   roomImageUrl?: unknown;
   createdAt?: unknown;
 };
-
-function normalizeAffiliateLink(link: unknown): string {
-  return typeof link === "string" ? link.trim() : "";
-}
 
 function normalizeTags(tags: unknown): string[] {
   if (!Array.isArray(tags)) return [];
@@ -40,6 +41,7 @@ function sanitizeItem(item: Record<string, unknown>) {
   return {
     id: typeof item.id === "string" ? item.id.trim() : "",
     title: typeof item.title === "string" ? item.title.trim() : "",
+    normalizedTitle: normalizeProductTitle(item.title),
     description:
       typeof item.description === "string" ? item.description.trim() : "",
     amount:
@@ -52,7 +54,7 @@ function sanitizeItem(item: Record<string, unknown>) {
   };
 }
 
-export function dedupeItemsByAffiliateLink(items: unknown[]): Record<string, unknown>[] {
+export function dedupeItemsByIdentity(items: unknown[]): Record<string, unknown>[] {
   const seen = new Set<string>();
   const uniqueItems: Record<string, unknown>[] = [];
 
@@ -60,9 +62,10 @@ export function dedupeItemsByAffiliateLink(items: unknown[]): Record<string, unk
     if (!rawItem || typeof rawItem !== "object") continue;
 
     const item = sanitizeItem(rawItem as Record<string, unknown>);
-    if (!item.affiliateLink || seen.has(item.affiliateLink)) continue;
+    const identityKey = getProductIdentityKey(item);
+    if (!identityKey || seen.has(identityKey)) continue;
 
-    seen.add(item.affiliateLink);
+    seen.add(identityKey);
     uniqueItems.push(item);
   }
 
@@ -74,32 +77,48 @@ export async function upsertProducts(
   createdAt: string,
   updatedAt: string
 ) {
-  const uniqueItems = dedupeItemsByAffiliateLink(items);
+  const uniqueItems = dedupeItemsByIdentity(items);
   const productObjectIds = [];
 
   for (const rawItem of uniqueItems) {
     const item = sanitizeItem(rawItem);
     if (!item.affiliateLink) continue;
 
-    const upserted = await ProductModel.findOneAndUpdate(
+    const matchClauses: Array<Record<string, string>> = [
       { affiliateLink: item.affiliateLink },
-      {
-        $set: {
-          title: item.title,
-          description: item.description,
-          amount: item.amount,
-          affiliateLink: item.affiliateLink,
-          imageUrl: item.imageUrl,
-          tags: item.tags,
-          updatedAt,
-        },
-        $setOnInsert: {
-          id: item.id || randomUUID(),
-          createdAt,
-        },
-      },
-      { upsert: true, new: true, setDefaultsOnInsert: true }
-    );
+    ];
+    if (item.normalizedTitle) {
+      matchClauses.push({ normalizedTitle: item.normalizedTitle });
+    }
+
+    const existing = await ProductModel.findOne({ $or: matchClauses });
+
+    const payload = {
+      title: item.title,
+      normalizedTitle: item.normalizedTitle,
+      description: item.description,
+      amount: item.amount,
+      imageUrl: item.imageUrl,
+      tags: item.tags,
+      updatedAt,
+    };
+
+    let upserted;
+
+    if (existing) {
+      existing.set(payload);
+      if (!existing.affiliateLink || existing.affiliateLink === item.affiliateLink) {
+        existing.affiliateLink = item.affiliateLink;
+      }
+      upserted = await existing.save();
+    } else {
+      upserted = await ProductModel.create({
+        id: item.id || randomUUID(),
+        affiliateLink: item.affiliateLink,
+        createdAt,
+        ...payload,
+      });
+    }
 
     productObjectIds.push(upserted._id);
   }
@@ -158,9 +177,7 @@ function dedupeSerializedItems(items: unknown[]) {
     if (!rawItem || typeof rawItem !== "object") continue;
 
     const item = rawItem as Record<string, unknown>;
-    const key =
-      normalizeAffiliateLink(item.affiliateLink) ||
-      (typeof item.id === "string" ? item.id.trim() : "");
+    const key = getProductIdentityKey(item);
 
     if (!key || seen.has(key)) continue;
 
