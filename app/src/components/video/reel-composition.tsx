@@ -19,9 +19,9 @@ import {
   interpolate,
   spring,
   Sequence,
-  Audio,
   Img,
 } from "remotion";
+import { Audio } from "@remotion/media";
 import { Item } from "../../lib/types";
 import {
   getSecondsPerItem,
