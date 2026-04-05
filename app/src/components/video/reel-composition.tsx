@@ -38,7 +38,35 @@ export interface ReelCompositionProps extends Record<string, unknown> {
   audioUrl?: string;
   timings?: Record<string, any> | null;
   theme?: string;
+  paletteIndex?: number;
 }
+
+export interface ReelPalette {
+  primary: string;   // Main accent (titles, price badges)
+  secondary: string; // Sub accent (budget pill, theme badge)
+  tertiary: string;  // CTA bubble / comment box
+  text: string;      // Text on primary
+  textSecondary: string; // Text on secondary
+}
+
+export const PALETTES: ReelPalette[] = [
+  // 0 — Original: Yellow + Pink + Mint
+  { primary: "#fbbf24", secondary: "#ec4899", tertiary: "#34d399", text: "#000", textSecondary: "#fff" },
+  // 1 — Electric Blue + Orange + Lime
+  { primary: "#3b82f6", secondary: "#f97316", tertiary: "#a3e635", text: "#fff", textSecondary: "#000" },
+  // 2 — Hot Purple + Cyan + Yellow
+  { primary: "#a855f7", secondary: "#06b6d4", tertiary: "#facc15", text: "#fff", textSecondary: "#000" },
+  // 3 — Coral Red + Teal + White
+  { primary: "#ef4444", secondary: "#14b8a6", tertiary: "#f8fafc", text: "#fff", textSecondary: "#000" },
+  // 4 — Emerald + Indigo + Amber
+  { primary: "#10b981", secondary: "#6366f1", tertiary: "#f59e0b", text: "#000", textSecondary: "#fff" },
+  // 5 — Rose + Sky + Lime
+  { primary: "#f43f5e", secondary: "#0ea5e9", tertiary: "#84cc16", text: "#fff", textSecondary: "#000" },
+  // 6 — Neon Green + Hot Pink + White
+  { primary: "#22c55e", secondary: "#ec4899", tertiary: "#ffffff", text: "#000", textSecondary: "#000" },
+  // 7 — Violet + Tangerine + Aqua
+  { primary: "#7c3aed", secondary: "#fb923c", tertiary: "#22d3ee", text: "#fff", textSecondary: "#000" },
+];
 
 const ROOM_FALLBACKS: Record<string, string[]> = {
   "living room": [
@@ -112,15 +140,16 @@ function IntroSlide({
   roomType,
   budgetPhrase,
   theme,
+  palette,
 }: {
   roomType: string;
   budgetPhrase: string;
   theme?: string;
+  palette: ReelPalette;
 }) {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
-  // Aggressive overshooting bounces
   const titleSpring = spring({ frame, fps, config: { damping: 10, mass: 1, stiffness: 200 } });
   const themeSpring = spring({ frame: frame - 4, fps, config: { damping: 10, mass: 1, stiffness: 200 } });
   const subtitleSpring = spring({
@@ -144,8 +173,8 @@ function IntroSlide({
             fontSize: 88,
             fontWeight: 900,
             textTransform: "uppercase",
-            color: "#fbbf24", // Vibrant Yellow
-            textShadow: "6px 6px 0px #000", // Hard neo-brutalist shadow
+            color: palette.primary,
+            textShadow: "6px 6px 0px #000",
             lineHeight: 1.1,
             letterSpacing: "-0.02em"
           }}
@@ -167,8 +196,8 @@ function IntroSlide({
               fontSize: 48,
               fontWeight: 900,
               textTransform: "uppercase",
-              color: "black",
-              background: "#34d399", // Neon Mint
+              color: palette.textSecondary,
+              background: palette.tertiary,
               padding: "10px 32px",
               borderRadius: 100,
               border: "6px solid black",
@@ -193,10 +222,10 @@ function IntroSlide({
             fontSize: 58,
             fontWeight: 900,
             textTransform: "uppercase",
-            color: "white",
-            background: "#ec4899", // Pop Pink
+            color: palette.textSecondary,
+            background: palette.secondary,
             padding: "16px 48px",
-            borderRadius: 16, // Squarer, aggressive look
+            borderRadius: 16,
             border: "6px solid black",
             boxShadow: "8px 8px 0px #000",
             letterSpacing: "-0.02em"
@@ -211,11 +240,10 @@ function IntroSlide({
 
 
 
-function ProductSlide({ item }: { item: Item; index: number }) {
+function ProductSlide({ item, palette }: { item: Item; index: number; palette: ReelPalette }) {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
-  // High bounce, aggressive physics
   const slideIn = spring({ frame, fps, config: { damping: 10, mass: 1, stiffness: 220 } });
   const priceSpring = spring({
     frame: frame - 10,
@@ -236,7 +264,7 @@ function ProductSlide({ item }: { item: Item; index: number }) {
         <div
           style={{
             position: "relative",
-            transform: `scale(${slideIn}) rotate(-3deg)`, // Dynamic scrapbooked polaroid rotation
+            transform: `scale(${slideIn}) rotate(-3deg)`,
             width: "82%",
             height: "56%",
             marginBottom: 40,
@@ -250,21 +278,21 @@ function ProductSlide({ item }: { item: Item; index: number }) {
               objectFit: "cover",
               borderRadius: 24,
               border: "12px solid white",
-              boxShadow: "16px 16px 0px rgba(0,0,0,0.9)", // Neo-brutalism shadow!
+              boxShadow: "16px 16px 0px rgba(0,0,0,0.9)",
             }}
           />
 
-          {/* Aggressive overlapping price badge pinned to the polaroid corner */}
+          {/* Price badge */}
           <div
             style={{
               position: "absolute",
               bottom: -20,
               right: -30,
-              transform: `scale(${priceSpring}) rotate(6deg)`, // Opposing rotation for tension
+              transform: `scale(${priceSpring}) rotate(6deg)`,
               fontSize: 64,
               fontWeight: 900,
-              color: "black",
-              background: "#34d399", // Neon Mint
+              color: palette.textSecondary,
+              background: palette.tertiary,
               padding: "16px 36px",
               borderRadius: 12,
               border: "6px solid black",
@@ -310,10 +338,12 @@ function CTASlide({
   roomType,
   budgetPhrase,
   delays,
+  palette,
 }: {
   roomType: string;
   budgetPhrase: string;
   delays?: { commentDelay: number; followDelay: number };
+  palette: ReelPalette;
 }) {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -355,8 +385,8 @@ function CTASlide({
               fontSize: 64,
               fontWeight: 900,
               textTransform: "uppercase",
-              color: "black",
-              background: "white",
+              color: palette.text,
+              background: palette.primary,
               padding: "16px 40px",
               borderRadius: 100,
               display: "inline-block",
@@ -373,7 +403,7 @@ function CTASlide({
               fontSize: 88,
               fontWeight: 900,
               textTransform: "uppercase",
-              color: "#fbbf24", // Vibrant Yellow
+              color: palette.secondary,
               textShadow: "8px 8px 0px #000",
               letterSpacing: "-0.03em",
               lineHeight: 1
@@ -395,8 +425,8 @@ function CTASlide({
             style={{
               fontSize: 64,
               fontWeight: 900,
-              color: "black",
-              background: "#34d399", // Neon Mint
+              color: palette.textSecondary,
+              background: palette.tertiary,
               padding: "32px 56px",
               borderRadius: 40,
               border: "8px solid black",
@@ -406,13 +436,13 @@ function CTASlide({
             }}
           >
             Comment{" "}
-            <span style={{ color: "white", textShadow: "4px 4px 0px #000" }}>
+            <span style={{ color: palette.secondary, textShadow: "4px 4px 0px #000" }}>
               "{roomType.toUpperCase()}"
             </span>
             <br />
             For Product Links!
 
-            {/* Little chat bubble tail centered! */}
+            {/* Little chat bubble tail */}
             <div
               style={{
                 position: "absolute",
@@ -420,7 +450,7 @@ function CTASlide({
                 left: "calc(50% - 20px)",
                 width: 40,
                 height: 40,
-                background: "#34d399",
+                background: palette.tertiary,
                 borderBottom: "8px solid black",
                 borderRight: "8px solid black",
                 transform: "rotate(45deg)",
@@ -442,8 +472,8 @@ function CTASlide({
             style={{
               fontSize: 36,
               fontWeight: 900,
-              color: "black",
-              background: "#fbbf24", // Yellow accent pill
+              color: palette.text,
+              background: palette.primary,
               padding: "16px 40px",
               borderRadius: 100,
               border: "6px solid black",
@@ -468,14 +498,14 @@ function CTASlide({
               display: "flex",
               alignItems: "center",
               gap: 20,
-              background: "#ec4899",
+              background: palette.secondary,
               padding: "20px 32px",
               borderRadius: 24,
               border: "6px solid black",
               boxShadow: "8px 8px 0px #000",
             }}
           >
-            <div style={{ fontSize: 44, fontWeight: 900, color: "white" }}>
+            <div style={{ fontSize: 44, fontWeight: 900, color: palette.textSecondary }}>
               @hackmyapartment
             </div>
             <div
@@ -506,17 +536,19 @@ export function ReelComposition({
   audioUrl,
   timings,
   theme,
+  paletteIndex = 0,
 }: ReelCompositionProps) {
   const { fps } = useVideoConfig();
 
-  // Inject the loud Outift Google Font globally via CSS!
+  const palette = PALETTES[Math.abs(Math.round(paletteIndex as number)) % PALETTES.length];
+
+  // Inject the Outfit Google Font globally
   const googleFontsImport = (
     <style>
       {`@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@800;900&display=swap');`}
     </style>
   );
 
-  // Use dynamic alignment from ElevenLabs. Fallback mathematically if raw unaligned script.
   const introFrames = timings ? Math.round(timings.introSeconds * fps) : INTRO_DURATION_SECONDS * fps;
   const ctaFrames = timings ? Math.round(timings.ctaSeconds * fps) : CTA_DURATION_SECONDS * fps;
   const fallbackItemFrames = Math.round(getSecondsPerItem(items.length) * fps);
@@ -525,7 +557,7 @@ export function ReelComposition({
 
   const introSlide = (
     <Sequence from={currentFrame} durationInFrames={introFrames}>
-      <IntroSlide roomType={roomType} budgetPhrase={budgetPhrase} theme={theme} />
+      <IntroSlide roomType={roomType} budgetPhrase={budgetPhrase} theme={theme} palette={palette} />
     </Sequence>
   );
   currentFrame += introFrames;
@@ -538,7 +570,7 @@ export function ReelComposition({
         from={currentFrame}
         durationInFrames={itemFrames}
       >
-        <ProductSlide item={item} index={i} />
+        <ProductSlide item={item} index={i} palette={palette} />
       </Sequence>
     );
     currentFrame += itemFrames;
@@ -550,7 +582,7 @@ export function ReelComposition({
       from={currentFrame}
       durationInFrames={ctaFrames}
     >
-      <CTASlide roomType={roomType} budgetPhrase={budgetPhrase} delays={timings?.ctaStages} />
+      <CTASlide roomType={roomType} budgetPhrase={budgetPhrase} delays={timings?.ctaStages} palette={palette} />
     </Sequence>
   );
 

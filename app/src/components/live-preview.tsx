@@ -65,6 +65,7 @@ export function LivePreview({
   const [audioStatus, setAudioStatus] = useState<StepStatus>("idle");
   const [audioUrl, setAudioUrl] = useState<string | undefined>();
   const [audioError, setAudioError] = useState<string | undefined>();
+  const [paletteIndex, setPaletteIndex] = useState(0);
   const audioBlobRef = useRef<Blob | null>(null);
 
   const rawTotal = items.reduce((s, i) => s + i.amount, 0);
@@ -93,6 +94,8 @@ export function LivePreview({
     if (!canGenerate || !settings.elevenLabsApiKey || !script) return;
     setAudioStatus("running");
     setAudioError(undefined);
+    // Pick a new random palette each time so every reel looks fresh
+    setPaletteIndex(Math.floor(Math.random() * 8));
     try {
       const execGeneration = async (vId: string) => {
         const data = await generateAudioWithTimestamps(script, settings.elevenLabsApiKey, vId);
@@ -321,6 +324,7 @@ export function LivePreview({
                 audioUrl={audioUrl}
                 timings={audioTimings}
                 theme={theme}
+                paletteIndex={paletteIndex}
               />
             </div>
           </div>
