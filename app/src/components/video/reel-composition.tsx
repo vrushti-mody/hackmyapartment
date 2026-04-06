@@ -102,10 +102,10 @@ const DEFAULT_FALLBACKS = ROOM_FALLBACKS["living room"];
 
 /**
  * How fast the voiceover plays back.
- * Setting this to 1.5 makes the audio play 1.5× faster and
+ * Setting this to 1.3 makes the audio play 1.3× faster and
  * scales all slide durations proportionally so sync is preserved.
  */
-const AUDIO_PLAYBACK_RATE = 1.5;
+const AUDIO_PLAYBACK_RATE = 1.3;
 
 function KenBurnsBackground({ roomImageUrl, seed, roomType }: { roomImageUrl?: string; seed: number; roomType: string }) {
   const frame = useCurrentFrame();
