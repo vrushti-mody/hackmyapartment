@@ -100,6 +100,13 @@ const ROOM_FALLBACKS: Record<string, string[]> = {
 
 const DEFAULT_FALLBACKS = ROOM_FALLBACKS["living room"];
 
+/**
+ * How fast the voiceover plays back.
+ * Setting this to 1.5 makes the audio play 1.5× faster and
+ * scales all slide durations proportionally so sync is preserved.
+ */
+const AUDIO_PLAYBACK_RATE = 1.5;
+
 function KenBurnsBackground({ roomImageUrl, seed, roomType }: { roomImageUrl?: string; seed: number; roomType: string }) {
   const frame = useCurrentFrame();
   const { durationInFrames } = useVideoConfig();
@@ -549,9 +556,16 @@ export function ReelComposition({
     </style>
   );
 
-  const introFrames = timings ? Math.round(timings.introSeconds * fps) : INTRO_DURATION_SECONDS * fps;
-  const ctaFrames = timings ? Math.round(timings.ctaSeconds * fps) : CTA_DURATION_SECONDS * fps;
-  const fallbackItemFrames = Math.round(getSecondsPerItem(items.length) * fps);
+  // All timing durations are divided by AUDIO_PLAYBACK_RATE so the slides
+  // stay in sync with the sped-up voiceover.
+  const rate = AUDIO_PLAYBACK_RATE;
+  const introFrames = timings
+    ? Math.round((timings.introSeconds / rate) * fps)
+    : Math.round((INTRO_DURATION_SECONDS / rate) * fps);
+  const ctaFrames = timings
+    ? Math.round((timings.ctaSeconds / rate) * fps)
+    : Math.round((CTA_DURATION_SECONDS / rate) * fps);
+  const fallbackItemFrames = Math.round((getSecondsPerItem(items.length) / rate) * fps);
 
   let currentFrame = 0;
 
@@ -563,7 +577,9 @@ export function ReelComposition({
   currentFrame += introFrames;
 
   const productSlides = items.map((item, i) => {
-    const itemFrames = timings?.itemSeconds[i] ? Math.round(timings.itemSeconds[i] * fps) : fallbackItemFrames;
+    const itemFrames = timings?.itemSeconds[i]
+      ? Math.round((timings.itemSeconds[i] / rate) * fps)
+      : fallbackItemFrames;
     const slide = (
       <Sequence
         key={item.id}
@@ -591,8 +607,8 @@ export function ReelComposition({
       {googleFontsImport}
       <KenBurnsBackground roomImageUrl={roomImageUrl} seed={items.length} roomType={roomType} />
 
-      {/* Voiceover audio perfectly tracked across entire reel */}
-      {audioUrl && <Audio src={audioUrl} />}
+      {/* Voiceover audio — plays at 1.5× speed, slides are scaled to match */}
+      {audioUrl && <Audio src={audioUrl} playbackRate={AUDIO_PLAYBACK_RATE} />}
 
       {introSlide}
       {productSlides}

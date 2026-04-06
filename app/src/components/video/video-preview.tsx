@@ -167,10 +167,11 @@ export function VideoPreview({
 
   if (items.length === 0) return null;
 
-  let durationInFrames = calculateDuration(items.length);
+  const AUDIO_PLAYBACK_RATE = 1.5;
+  let durationInFrames = Math.round(calculateDuration(items.length) / AUDIO_PLAYBACK_RATE);
   if (timings) {
     const totalSecs = timings.introSeconds + timings.itemSeconds.reduce((a, b) => a + b, 0) + timings.ctaSeconds;
-    durationInFrames = Math.round(totalSecs * VIDEO_FPS);
+    durationInFrames = Math.round((totalSecs / AUDIO_PLAYBACK_RATE) * VIDEO_FPS);
   }
 
   const previewProps: ReelCompositionProps = {
