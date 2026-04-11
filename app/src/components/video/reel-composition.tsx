@@ -24,9 +24,10 @@ import {
 import { Audio } from "@remotion/media";
 import { Item } from "../../lib/types";
 import {
-  getSecondsPerItem,
-  CTA_DURATION_SECONDS,
-  INTRO_DURATION_SECONDS,
+  AUDIO_PLAYBACK_RATE,
+  getIntroDurationInFrames,
+  getProductDurationInFrames,
+  getCtaDurationInFrames,
 } from "../../lib/video-config";
 import { AudioTimingMapping } from "../../lib/audio-alignment";
 import { getUpgradeHookPrice } from "../../lib/budget";
@@ -101,13 +102,6 @@ const ROOM_FALLBACKS: Record<string, string[]> = {
 };
 
 const DEFAULT_FALLBACKS = ROOM_FALLBACKS["living room"];
-
-/**
- * How fast the voiceover plays back.
- * Setting this to 1.2 makes the audio play 1.2× faster and
- * scales all slide durations proportionally so sync is preserved.
- */
-const AUDIO_PLAYBACK_RATE = 1.2;
 
 function KenBurnsBackground({ roomImageUrl, seed, roomType }: { roomImageUrl?: string; seed: number; roomType: string }) {
   const frame = useCurrentFrame();
@@ -570,21 +564,10 @@ export function ReelComposition({
     </style>
   );
 
-  // All timing durations are divided by AUDIO_PLAYBACK_RATE so the slides
-  // stay in sync with the sped-up voiceover.
-  const rate = AUDIO_PLAYBACK_RATE;
-  const introFrames = timings
-    ? Math.round((timings.introSeconds / rate) * fps)
-    : Math.round((INTRO_DURATION_SECONDS / rate) * fps);
-  const ctaFrames = timings
-    ? Math.round((timings.ctaSeconds / rate) * fps)
-    : Math.round((CTA_DURATION_SECONDS / rate) * fps);
-  const fallbackItemFrames = Math.round((getSecondsPerItem(items.length) / rate) * fps);
-
-  const productFrames = items.map((_, i) =>
-    timings?.itemSeconds[i]
-      ? Math.round((timings.itemSeconds[i] / rate) * fps)
-      : fallbackItemFrames
+  const introFrames = getIntroDurationInFrames(fps, timings);
+  const ctaFrames = getCtaDurationInFrames(fps, timings);
+  const productFrames = items.map((_, index) =>
+    getProductDurationInFrames(items.length, index, fps, timings)
   );
 
   const introSlide = (

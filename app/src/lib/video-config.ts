@@ -8,10 +8,13 @@
  * Total duration is capped at 60 seconds to fit an Instagram Reel.
  */
 
+import type { AudioTimingMapping } from "./audio-alignment";
+
 // Instagram Reel dimensions (9:16 portrait) and frame rate.
 export const VIDEO_WIDTH = 1080;
 export const VIDEO_HEIGHT = 1920;
 export const VIDEO_FPS = 30;
+export const AUDIO_PLAYBACK_RATE = 1.2;
 
 // Fixed segment durations in seconds.
 export const CTA_DURATION_SECONDS = 4;
@@ -40,4 +43,57 @@ export function calculateDuration(itemCount: number): number {
     CTA_DURATION_SECONDS;
   // Hard cap at 60s
   return Math.min(totalSeconds, MAX_REEL_SECONDS) * VIDEO_FPS;
+}
+
+function getAdjustedFrames(seconds: number, fps: number): number {
+  return Math.max(1, Math.round((seconds / AUDIO_PLAYBACK_RATE) * fps));
+}
+
+export function getIntroDurationInFrames(
+  fps: number,
+  timings?: AudioTimingMapping | null
+): number {
+  return getAdjustedFrames(timings?.introSeconds ?? INTRO_DURATION_SECONDS, fps);
+}
+
+export function getProductDurationInFrames(
+  itemCount: number,
+  index: number,
+  fps: number,
+  timings?: AudioTimingMapping | null
+): number {
+  const seconds = timings?.itemSeconds[index] ?? getSecondsPerItem(itemCount);
+  return getAdjustedFrames(seconds, fps);
+}
+
+export function getCtaDurationInFrames(
+  fps: number,
+  timings?: AudioTimingMapping | null
+): number {
+  const timedCtaFrames = getAdjustedFrames(
+    timings?.ctaSeconds ?? CTA_DURATION_SECONDS,
+    fps
+  );
+
+  const followHoldFrames = timings?.ctaStages
+    ? getAdjustedFrames(timings.ctaStages.followDelay + 1.5, fps)
+    : 0;
+
+  const defaultFrames = getAdjustedFrames(CTA_DURATION_SECONDS, fps);
+
+  return Math.max(defaultFrames, timedCtaFrames, followHoldFrames);
+}
+
+export function getReelDurationInFrames(
+  itemCount: number,
+  fps: number,
+  timings?: AudioTimingMapping | null
+): number {
+  const introFrames = getIntroDurationInFrames(fps, timings);
+  const productFrames = Array.from({ length: itemCount }, (_, index) =>
+    getProductDurationInFrames(itemCount, index, fps, timings)
+  );
+  const ctaFrames = getCtaDurationInFrames(fps, timings);
+
+  return introFrames + productFrames.reduce((sum, frames) => sum + frames, 0) + ctaFrames;
 }

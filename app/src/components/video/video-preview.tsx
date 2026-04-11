@@ -15,7 +15,7 @@ import {
   VIDEO_WIDTH,
   VIDEO_HEIGHT,
   VIDEO_FPS,
-  calculateDuration,
+  getReelDurationInFrames,
 } from "@/lib/video-config";
 import { AudioTimingMapping } from "@/lib/audio-alignment";
 import { downloadBlob } from "@/lib/export";
@@ -169,12 +169,7 @@ export function VideoPreview({
 
   if (items.length === 0) return null;
 
-  const AUDIO_PLAYBACK_RATE = 1.5;
-  let durationInFrames = Math.round(calculateDuration(items.length) / AUDIO_PLAYBACK_RATE);
-  if (timings) {
-    const totalSecs = timings.introSeconds + timings.itemSeconds.reduce((a, b) => a + b, 0) + timings.ctaSeconds;
-    durationInFrames = Math.round((totalSecs / AUDIO_PLAYBACK_RATE) * VIDEO_FPS);
-  }
+  const durationInFrames = getReelDurationInFrames(items.length, VIDEO_FPS, timings);
 
   const previewProps: ReelCompositionProps = {
     items,
