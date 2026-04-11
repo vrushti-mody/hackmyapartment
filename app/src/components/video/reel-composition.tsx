@@ -29,14 +29,16 @@ import {
   INTRO_DURATION_SECONDS,
 } from "../../lib/video-config";
 import { AudioTimingMapping } from "../../lib/audio-alignment";
+import { getUpgradeHookPrice } from "../../lib/budget";
 
 export interface ReelCompositionProps extends Record<string, unknown> {
   items: Item[];
   roomType: string;
   budgetPhrase: string;
+  reelType?: "create" | "upgrade";
   roomImageUrl?: string;
   audioUrl?: string;
-  timings?: Record<string, any> | null;
+  timings?: AudioTimingMapping | null;
   theme?: string;
   paletteIndex?: number;
 }
@@ -102,10 +104,10 @@ const DEFAULT_FALLBACKS = ROOM_FALLBACKS["living room"];
 
 /**
  * How fast the voiceover plays back.
- * Setting this to 1.3 makes the audio play 1.3× faster and
+ * Setting this to 1.2 makes the audio play 1.2× faster and
  * scales all slide durations proportionally so sync is preserved.
  */
-const AUDIO_PLAYBACK_RATE = 1.3;
+const AUDIO_PLAYBACK_RATE = 1.2;
 
 function KenBurnsBackground({ roomImageUrl, seed, roomType }: { roomImageUrl?: string; seed: number; roomType: string }) {
   const frame = useCurrentFrame();
@@ -117,7 +119,7 @@ function KenBurnsBackground({ roomImageUrl, seed, roomType }: { roomImageUrl?: s
 
   const normalizedType = roomType.toLowerCase().trim();
   const pool = Object.entries(ROOM_FALLBACKS).find(([key]) => normalizedType.includes(key))?.[1] || DEFAULT_FALLBACKS;
-  
+
   const resolvedUrl = roomImageUrl || pool[seed % pool.length];
 
   return (
@@ -144,18 +146,24 @@ function KenBurnsBackground({ roomImageUrl, seed, roomType }: { roomImageUrl?: s
 }
 
 function IntroSlide({
+  items,
   roomType,
   budgetPhrase,
+  reelType = "upgrade",
   theme,
   palette,
 }: {
+  items: Item[];
   roomType: string;
   budgetPhrase: string;
+  reelType?: "create" | "upgrade";
   theme?: string;
   palette: ReelPalette;
 }) {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
+  const isCreateReel = reelType === "create";
+  const upgradeHookPrice = getUpgradeHookPrice(items);
 
   const titleSpring = spring({ frame, fps, config: { damping: 10, mass: 1, stiffness: 200 } });
   const themeSpring = spring({ frame: frame - 4, fps, config: { damping: 10, mass: 1, stiffness: 200 } });
@@ -177,20 +185,22 @@ function IntroSlide({
       >
         <div
           style={{
-            fontSize: 88,
+            fontSize: isCreateReel ? 88 : 66,
             fontWeight: 900,
-            textTransform: "uppercase",
+            textTransform: isCreateReel ? "uppercase" : undefined,
             color: palette.primary,
             textShadow: "6px 6px 0px #000",
             lineHeight: 1.1,
             letterSpacing: "-0.02em"
           }}
         >
-          Let's Build a{"\n"}{roomType}
+          {isCreateReel
+            ? <>{`Let's Build a`}{"\n"}{roomType}</>
+            : <>Upgrade your{"\n"}{roomType.toLowerCase()}{"\n"}with these finds</>}
         </div>
       </div>
-      
-      {theme && (
+
+      {isCreateReel && theme && (
         <div
           style={{
             transform: `scale(${themeSpring}) rotate(2deg)`,
@@ -228,17 +238,20 @@ function IntroSlide({
           style={{
             fontSize: 58,
             fontWeight: 900,
-            textTransform: "uppercase",
+            textTransform: isCreateReel ? "uppercase" : undefined,
             color: palette.textSecondary,
             background: palette.secondary,
             padding: "16px 48px",
             borderRadius: 16,
             border: "6px solid black",
             boxShadow: "8px 8px 0px #000",
-            letterSpacing: "-0.02em"
+            letterSpacing: "-0.02em",
+            lineHeight: 1.15,
           }}
         >
-          {budgetPhrase}
+          {isCreateReel
+            ? budgetPhrase
+            : <>that cost ${upgradeHookPrice}{"\n"}and under</>}
         </div>
       </div>
     </AbsoluteFill>
@@ -444,7 +457,7 @@ function CTASlide({
           >
             Comment{" "}
             <span style={{ color: palette.secondary, textShadow: "4px 4px 0px #000" }}>
-              "{roomType.toUpperCase()}"
+              {`"${roomType.toUpperCase()}"`}
             </span>
             <br />
             For Product Links!
@@ -539,6 +552,7 @@ export function ReelComposition({
   items,
   roomType,
   budgetPhrase,
+  reelType = "upgrade",
   roomImageUrl,
   audioUrl,
   timings,
@@ -567,35 +581,48 @@ export function ReelComposition({
     : Math.round((CTA_DURATION_SECONDS / rate) * fps);
   const fallbackItemFrames = Math.round((getSecondsPerItem(items.length) / rate) * fps);
 
-  let currentFrame = 0;
+  const productFrames = items.map((_, i) =>
+    timings?.itemSeconds[i]
+      ? Math.round((timings.itemSeconds[i] / rate) * fps)
+      : fallbackItemFrames
+  );
 
   const introSlide = (
-    <Sequence from={currentFrame} durationInFrames={introFrames}>
-      <IntroSlide roomType={roomType} budgetPhrase={budgetPhrase} theme={theme} palette={palette} />
+    <Sequence from={0} durationInFrames={introFrames}>
+      <IntroSlide
+        items={items}
+        roomType={roomType}
+        budgetPhrase={budgetPhrase}
+        reelType={reelType}
+        theme={theme}
+        palette={palette}
+      />
     </Sequence>
   );
-  currentFrame += introFrames;
 
   const productSlides = items.map((item, i) => {
-    const itemFrames = timings?.itemSeconds[i]
-      ? Math.round((timings.itemSeconds[i] / rate) * fps)
-      : fallbackItemFrames;
-    const slide = (
+    const itemFrames = productFrames[i];
+    const itemFrom =
+      introFrames +
+      productFrames.slice(0, i).reduce((sum, frames) => sum + frames, 0);
+
+    return (
       <Sequence
         key={item.id}
-        from={currentFrame}
+        from={itemFrom}
         durationInFrames={itemFrames}
       >
         <ProductSlide item={item} index={i} palette={palette} />
       </Sequence>
     );
-    currentFrame += itemFrames;
-    return slide;
   });
+
+  const ctaFrom =
+    introFrames + productFrames.reduce((sum, frames) => sum + frames, 0);
 
   const ctaSlide = (
     <Sequence
-      from={currentFrame}
+      from={ctaFrom}
       durationInFrames={ctaFrames}
     >
       <CTASlide roomType={roomType} budgetPhrase={budgetPhrase} delays={timings?.ctaStages} palette={palette} />

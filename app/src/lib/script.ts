@@ -6,6 +6,7 @@
  */
 
 import { Item } from "./types";
+import { getUpgradeHook } from "./budget";
 
 /** Count words in a string. */
 function wordCount(text: string): number {
@@ -41,7 +42,7 @@ export function generateScript(
     intro = `Create a beautiful ${themeStr}${roomType.toLowerCase()} for under ${roundedTotal} dollars with these finds.`;
     cta = `Comment "${roomType.toUpperCase()}" for product links or check bio! Follow for more.`;
   } else {
-    intro = `Upgrade your ${roomType.toLowerCase()} on a budget with these smart finds.`;
+    intro = `${getUpgradeHook(roomType, items)}.`;
     cta = `Total upgrade for under ${roundedTotal} dollars! Comment "${roomType.toUpperCase()}" for product links or check bio! Follow for more.`;
   }
 

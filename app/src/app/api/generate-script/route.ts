@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getUpgradeHook } from "@/lib/budget";
 
 interface ScriptRequestItem {
   amount: number;
@@ -16,10 +17,12 @@ interface ScriptResponseCandidate {
 
 export async function POST(req: NextRequest) {
   try {
-    const { items, roomType, apiKey } = (await req.json()) as {
+    const { items, roomType, apiKey, reelType = "upgrade", theme = "" } = (await req.json()) as {
       items: ScriptRequestItem[];
       roomType: string;
       apiKey: string;
+      reelType?: "upgrade" | "create";
+      theme?: string;
     };
 
     if (!items || !items.length || !apiKey) {
@@ -52,8 +55,12 @@ export async function POST(req: NextRequest) {
     }
 
     // Build one block per product with only the name and price.
-    const introChunk = `CHUNK 1 (Opening hook):
-Write ONE short, punchy sentence (max 12 words) that hooks viewers. Do NOT name any product yet.`;
+    const introChunk =
+      reelType === "create"
+        ? `CHUNK 1 (Opening hook):
+Write ONE short, punchy sentence (max 12 words) that hooks viewers. Do NOT name any product yet.`
+        : `CHUNK 1 (Opening hook):
+Write exactly this: "${getUpgradeHook(roomType, capped)}."`;
 
     const productChunks = capped.map((item, idx: number) => {
       const title = sanitizeForPrompt(item.title);
@@ -64,12 +71,17 @@ Write ONE complete sentence (8-14 words) naming this product and its price only.
 Do NOT mention descriptions, features, benefits, materials, style, or reasons to buy.`;
     });
 
+    const ctaText =
+      reelType === "create"
+        ? `Comment ${roomType.toUpperCase()} for product links or check bio. Follow for more.`
+        : `Total upgrade for under ${Math.ceil(items.reduce((sum, item) => sum + item.amount, 0))} dollars! Comment ${roomType.toUpperCase()} for product links or check bio. Follow for more.`;
+
     const ctaChunk = `CHUNK ${capped.length + 2} (Closing CTA):
-Write exactly this: "Total upgrade for under ${Math.ceil(items.reduce((sum, item) => sum + item.amount, 0))} dollars! Comment ${roomType.toUpperCase()} for product links or check bio. Follow for more."`;
+Write exactly this: "${ctaText}"`;
 
     const allChunks = [introChunk, ...productChunks, ctaChunk].join("\n\n---\n\n");
 
-    const prompt = `You are writing a fast-paced 60-second Instagram Reel voiceover script.
+    const prompt = `You are writing a fast-paced 60-second Instagram Reel voiceover script for ${reelType === "create" ? `creating a ${theme ? `${theme.trim()} ` : ""}${roomType.toLowerCase()}` : `upgrading a ${roomType.toLowerCase()}`}.
 The script must have ${capped.length + 2} chunks separated by exactly one blank line (double newline).
 Total word count: 55 to 85 words.
 

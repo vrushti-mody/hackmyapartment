@@ -24,6 +24,7 @@ interface VideoPreviewProps {
   items: Item[];
   roomType: string;
   budgetPhrase: string;
+  reelType: "upgrade" | "create";
   roomImageUrl?: string;
   audioUrl?: string;
   timings?: AudioTimingMapping | null;
@@ -151,6 +152,7 @@ export function VideoPreview({
   items,
   roomType,
   budgetPhrase,
+  reelType,
   roomImageUrl,
   audioUrl,
   timings,
@@ -178,6 +180,7 @@ export function VideoPreview({
     items,
     roomType,
     budgetPhrase,
+    reelType,
     roomImageUrl,
     audioUrl,
     timings,

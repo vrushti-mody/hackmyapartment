@@ -12,6 +12,7 @@
  */
 
 import { Item } from "./types";
+import { getUpgradeHook } from "./budget";
 
 /** Base aesthetic descriptors per room type. */
 const ROOM_BASE: Record<string, string> = {
@@ -89,8 +90,8 @@ export function generateVoiceoverPrompt(
   reelType: "upgrade" | "create" = "upgrade",
   theme?: string
 ): string {
-  const action = reelType === "create" ? "creating" : "upgrading";
   const themeStr = theme && theme.trim() ? ` with a "${theme.trim()}" aesthetic` : "";
+  const upgradeHook = `${getUpgradeHook(roomType, items)}.`;
   const productList = items
     .slice(0, 5)
     .map(
@@ -99,13 +100,29 @@ export function generateVoiceoverPrompt(
     )
     .join("\n");
 
-  return `Write a punchy 60-second Instagram Reel voiceover script for ${action} a ${roomType.toLowerCase()}${themeStr} on a budget.
+  if (reelType === "create") {
+    return `Write a punchy 60-second Instagram Reel voiceover script for creating a ${roomType.toLowerCase()}${themeStr} on a budget.
 
 Products featured (under $${roundedTotal} total):
 ${productList}
 
 Requirements:
 - Opening hook: 1 short, exciting sentence. No product names yet.
+- Per product: EXACTLY 1 sentence naming the product and its price only. No descriptions, features, benefits, materials, or extra detail.
+- Closing CTA: "Total upgrade for under $${roundedTotal}! Comment ${roomType.toUpperCase()} for product links or check bio. Follow for more."
+- Separate each section with a blank line.
+- Total: ~100 words for a fast-paced natural reading pace.
+- Tone: upbeat, conversational, like a popular content creator.
+- No dashes, no em-dashes, no asterisks. Commas and periods only.`;
+  }
+
+  return `Write a punchy 60-second Instagram Reel voiceover script for upgrading a ${roomType.toLowerCase()}${themeStr}.
+
+Products featured (under $${roundedTotal} total):
+${productList}
+
+Requirements:
+- Opening hook: Write exactly this: "${upgradeHook}"
 - Per product: EXACTLY 1 sentence naming the product and its price only. No descriptions, features, benefits, materials, or extra detail.
 - Closing CTA: "Total upgrade for under $${roundedTotal}! Comment ${roomType.toUpperCase()} for product links or check bio. Follow for more."
 - Separate each section with a blank line.

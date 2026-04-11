@@ -16,7 +16,7 @@
 import { useState, useRef } from "react";
 import { Item } from "@/lib/types";
 import { AppSettings } from "@/components/settings-panel";
-import { getRoundedTotal, getBudgetPhrase } from "@/lib/budget";
+import { getRoundedTotal, getBudgetPhrase, getUpgradeHookPrice } from "@/lib/budget";
 import { generateScript, estimateScriptSeconds } from "@/lib/script";
 import { generateCaption, generateHashtags } from "@/lib/caption";
 import { generateLinksExport, downloadTextFile, downloadBlob } from "@/lib/export";
@@ -71,6 +71,13 @@ export function LivePreview({
   const rawTotal = items.reduce((s, i) => s + i.amount, 0);
   const roundedTotal = getRoundedTotal(rawTotal);
   const budgetPhrase = getBudgetPhrase(rawTotal);
+  const upgradeHookPreview = getUpgradeHookPrice(items);
+  const hookPreview =
+    reelType === "create"
+      ? budgetPhrase
+      : upgradeHookPreview > 0
+        ? `cost $${upgradeHookPreview} and under`
+        : "";
 
   const defaultScript = generateScript(items, roomType, roundedTotal, reelType, theme);
   const script = userScript || defaultScript;
@@ -188,7 +195,7 @@ export function LivePreview({
           <div className="text-[11px] font-medium text-zinc-400 uppercase tracking-wide mt-0.5">Total</div>
         </div>
         <div className="bg-zinc-100 border border-zinc-200 rounded-2xl py-3 px-2 shadow-sm">
-          <div className="text-lg font-extrabold text-zinc-800 leading-tight">{budgetPhrase || "—"}</div>
+          <div className="text-lg font-extrabold text-zinc-800 leading-tight">{hookPreview || "—"}</div>
           <div className="text-[11px] font-medium text-zinc-400 uppercase tracking-wide mt-0.5">Hook</div>
         </div>
       </div>
@@ -320,6 +327,7 @@ export function LivePreview({
                 items={items}
                 roomType={roomType}
                 budgetPhrase={budgetPhrase}
+                reelType={reelType}
                 roomImageUrl={roomImageUrl}
                 audioUrl={audioUrl}
                 timings={audioTimings}

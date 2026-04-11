@@ -8,6 +8,7 @@ const defaultReelProps: ReelCompositionProps = {
   items: [],
   roomType: "Bedroom",
   budgetPhrase: "under $100",
+  reelType: "upgrade",
 };
 
 export const RemotionRoot: React.FC = () => {
