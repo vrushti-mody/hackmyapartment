@@ -9,7 +9,7 @@
 
 import { useRef, useState } from "react";
 import { Player, PlayerRef } from "@remotion/player";
-import { ReelComposition, type ReelCompositionProps } from "./reel-composition";
+import { ReelComposition, resolveRoomImageUrl, type ReelCompositionProps } from "./reel-composition";
 import { Item } from "@/lib/types";
 import {
   VIDEO_WIDTH,
@@ -201,8 +201,10 @@ export function VideoPreview({
 
   /** Pre-fetch every image to a Base64 string to completely avoid Browser/Worker URL bugs. */
   async function buildRenderInputProps(): Promise<ReelCompositionProps> {
+    const computedRoomUrl = resolveRoomImageUrl(roomType, items.length, roomImageUrl);
+
     const [roomDataUri, ...itemDataUris] = await Promise.all([
-      roomImageUrl ? fetchAsDataUri(roomImageUrl) : Promise.resolve(undefined),
+      fetchAsDataUri(computedRoomUrl),
       ...items.map((item) =>
         item.imageUrl ? fetchAsDataUri(item.imageUrl) : Promise.resolve("")
       ),

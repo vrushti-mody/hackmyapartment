@@ -101,7 +101,14 @@ const ROOM_FALLBACKS: Record<string, string[]> = {
   ]
 };
 
-const DEFAULT_FALLBACKS = ROOM_FALLBACKS["living room"];
+export const DEFAULT_FALLBACKS = ROOM_FALLBACKS["living room"];
+
+export function resolveRoomImageUrl(roomType: string, seed: number, explicitUrl?: string): string {
+  if (explicitUrl) return explicitUrl;
+  const normalizedType = roomType.toLowerCase().trim();
+  const pool = Object.entries(ROOM_FALLBACKS).find(([key]) => normalizedType.includes(key))?.[1] || DEFAULT_FALLBACKS;
+  return pool[seed % pool.length];
+}
 
 function KenBurnsBackground({ roomImageUrl, seed, roomType }: { roomImageUrl?: string; seed: number; roomType: string }) {
   const frame = useCurrentFrame();
@@ -111,10 +118,7 @@ function KenBurnsBackground({ roomImageUrl, seed, roomType }: { roomImageUrl?: s
     extrapolateRight: "clamp",
   });
 
-  const normalizedType = roomType.toLowerCase().trim();
-  const pool = Object.entries(ROOM_FALLBACKS).find(([key]) => normalizedType.includes(key))?.[1] || DEFAULT_FALLBACKS;
-
-  const resolvedUrl = roomImageUrl || pool[seed % pool.length];
+  const resolvedUrl = resolveRoomImageUrl(roomType, seed, roomImageUrl);
 
   return (
     <AbsoluteFill style={{ overflow: "hidden" }}>
