@@ -8,14 +8,22 @@ import { useState, useEffect } from "react";
 import { ShopHeader } from "@/components/shop/shop-header";
 import { ShopFooter } from "@/components/shop/shop-footer";
 import { HorizontalCarousel } from "@/components/shop/horizontal-carousel";
-import { getEpisodes, getAllProducts, getRoomGradient, type ProductWithEpisode } from "@/lib/store-service";
+import { getEpisodes, getAllProducts, type ProductWithEpisode } from "@/lib/store-service";
 import { Episode } from "@/lib/types";
+import {
+  getBundleKind,
+  getBundlePriceLabel,
+  getBundleTheme,
+  getBundleTitle,
+} from "@/lib/bundle-meta";
+import { getRoomFallbackImage } from "@/lib/room-images";
 
 const INSTAGRAM_URL = "https://www.instagram.com/hackmyapartment/";
 
 function BundleCarouselCard({ episode }: { episode: Episode }) {
-  const total = episode.items.reduce((s, i) => s + i.amount, 0);
-  const theme = episode.theme?.trim();
+  const theme = getBundleTheme(episode);
+  const bundleKind = getBundleKind(episode.reelType);
+  const heroImage = episode.roomImageUrl || getRoomFallbackImage(episode.roomType, episode.id);
   return (
     <Link
       href={`/shop/bundles/${episode.id}`}
@@ -23,24 +31,22 @@ function BundleCarouselCard({ episode }: { episode: Episode }) {
     >
       <div className="bg-white border border-zinc-200 rounded-2xl overflow-hidden hover:border-zinc-300 hover:shadow-md transition-all duration-200">
         <div className="h-36 overflow-hidden relative">
-          {episode.roomImageUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={episode.roomImageUrl} alt={episode.roomType} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-          ) : (
-            <div className="w-full h-full" style={{ background: getRoomGradient(episode.roomType) }} />
-          )}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={heroImage} alt={episode.roomType} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
           <span className="absolute top-2 left-2 bg-white/90 backdrop-blur-sm text-zinc-700 text-[10px] font-semibold px-2 py-0.5 rounded-full">
-            {episode.roomType}
+            {bundleKind === "design" ? "Design" : "Upgrade"}
           </span>
         </div>
         <div className="p-3">
-          <h3 className="font-semibold text-sm text-zinc-800">{episode.roomType} Bundle</h3>
+          <h3 className="font-semibold text-sm text-zinc-800">{getBundleTitle(episode)}</h3>
           {theme && (
             <p className="text-[11px] text-zinc-500 mt-1 line-clamp-1">
               Theme: {theme}
             </p>
           )}
-          <p className="text-xs text-zinc-400 mt-0.5">{episode.items.length} items · ${total.toFixed(2)}</p>
+          <p className="text-xs text-zinc-400 mt-0.5">
+            {episode.items.length} items · {getBundlePriceLabel(episode)}
+          </p>
         </div>
       </div>
     </Link>
@@ -88,6 +94,9 @@ export default function ShopHomePage() {
 
   if (!loaded) return (<div className="min-h-screen bg-zinc-50 flex items-center justify-center"><div className="text-sm text-zinc-400 animate-pulse">Loading…</div></div>);
 
+  const designBundles = episodes.filter((episode) => episode.reelType === "create");
+  const upgradeBundles = episodes.filter((episode) => episode.reelType !== "create");
+
   return (
     <div className="min-h-screen bg-white text-zinc-900">
       <ShopHeader />
@@ -106,17 +115,26 @@ export default function ShopHomePage() {
           Apartment upgrades on a budget
         </h1>
         <p className="text-zinc-500 text-base max-w-md mx-auto">
-          Curated product bundles from our reels — every item linked and ready to shop.
+          Curated design bundles and upgrade bundles from our reels, with every item linked and ready to shop.
         </p>
       </div>
 
       <main className="max-w-6xl mx-auto px-4 pb-16 space-y-12">
-        {/* Bundle Carousel */}
-        <HorizontalCarousel title="Shop Bundles" viewAllHref="/shop/bundles">
-          {episodes.map((ep) => (
-            <BundleCarouselCard key={ep.id} episode={ep} />
-          ))}
-        </HorizontalCarousel>
+        {designBundles.length > 0 && (
+          <HorizontalCarousel title="Design Bundles" viewAllHref="/shop/bundles">
+            {designBundles.map((ep) => (
+              <BundleCarouselCard key={ep.id} episode={ep} />
+            ))}
+          </HorizontalCarousel>
+        )}
+
+        {upgradeBundles.length > 0 && (
+          <HorizontalCarousel title="Upgrade Bundles" viewAllHref="/shop/bundles">
+            {upgradeBundles.map((ep) => (
+              <BundleCarouselCard key={ep.id} episode={ep} />
+            ))}
+          </HorizontalCarousel>
+        )}
 
         {/* Product Carousel */}
         <HorizontalCarousel title="Featured Products" viewAllHref="/shop/products">

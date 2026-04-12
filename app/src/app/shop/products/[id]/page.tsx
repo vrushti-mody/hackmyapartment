@@ -10,6 +10,7 @@ import { useParams } from "next/navigation";
 import { ShopHeader } from "@/components/shop/shop-header";
 import { getProductById, type ProductWithEpisode } from "@/lib/store-service";
 import { Episode } from "@/lib/types";
+import { getBundleTitle } from "@/lib/bundle-meta";
 
 export default function ProductDetailPage() {
   const params = useParams();
@@ -41,6 +42,11 @@ export default function ProductDetailPage() {
       </div>
     );
   }
+
+  const primaryBundleTitle = getBundleTitle({
+    roomType: product.episodeRoomType,
+    reelType: product.bundles[0]?.reelType ?? product.episode.reelType,
+  });
 
   return (
     <div className="min-h-screen bg-white text-zinc-900">
@@ -74,7 +80,7 @@ export default function ProductDetailPage() {
               <p className="text-xs text-zinc-400 font-medium">
                 From{" "}
                 <Link href={`/shop/bundles/${product.episodeId}`} className="text-zinc-500 hover:text-zinc-700 underline">
-                  {product.episodeRoomType} Bundle
+                  {primaryBundleTitle}
                 </Link>
               </p>
               {product.bundles.length > 1 && (
@@ -122,7 +128,7 @@ export default function ProductDetailPage() {
               href={`/shop/bundles/${product.episodeId}`}
               className="inline-flex items-center gap-1 text-sm text-zinc-400 hover:text-zinc-600 transition"
             >
-              ← View full {product.episodeRoomType} bundle
+              ← View full {primaryBundleTitle}
             </Link>
           </div>
         </div>
@@ -170,7 +176,7 @@ export default function ProductDetailPage() {
                     href={`/shop/bundles/${bundle.id}`}
                     className="text-xs font-semibold text-zinc-600 border border-zinc-200 px-3 py-1.5 rounded-lg hover:bg-zinc-50 transition"
                   >
-                    {bundle.roomType} Bundle
+                    {getBundleTitle(bundle)}
                   </Link>
                 ))}
             </div>

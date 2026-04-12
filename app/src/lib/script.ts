@@ -6,7 +6,7 @@
  */
 
 import { Item } from "./types";
-import { getUpgradeHook } from "./budget";
+import { formatCurrency, getUpgradeHook } from "./budget";
 
 /** Count words in a string. */
 function wordCount(text: string): number {
@@ -40,19 +40,19 @@ export function generateScript(
   if (reelType === "create") {
     const themeStr = theme ? `${theme.toLowerCase()} ` : "";
     intro = `Create a beautiful ${themeStr}${roomType.toLowerCase()} for under ${roundedTotal} dollars with these finds.`;
-    cta = `Comment "${roomType.toUpperCase()}" for product links or check bio! Follow for more.`;
+    cta = `Comment "${roomType.toUpperCase()}" for product links or check bio! Follow @hackmyapartment for more.`;
   } else {
     intro = `${getUpgradeHook(roomType, items)}.`;
-    cta = `Total upgrade for under ${roundedTotal} dollars! Comment "${roomType.toUpperCase()}" for product links or check bio! Follow for more.`;
+    cta = `Comment "${roomType.toUpperCase()}" for product links or check bio! Follow @hackmyapartment for more.`;
   }
 
   const connectors = ["Next,", "Then,", "And,"];
   const lines = items.map((item, i) => {
     if (i === 0) {
-      return `First, ${item.title} for ${Math.floor(item.amount)} dollars.`;
+      return `First, ${item.title} for ${formatCurrency(item.amount)}.`;
     }
     const connector = connectors[(i - 1) % connectors.length];
-    return `${connector} ${item.title} for ${Math.floor(item.amount)} dollars.`;
+    return `${connector} ${item.title} for ${formatCurrency(item.amount)}.`;
   });
 
   return `${intro}\n\n${lines.join("\n\n")}\n\n${cta}`;

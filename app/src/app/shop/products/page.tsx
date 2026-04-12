@@ -14,6 +14,7 @@ import {
   getCategories,
   type ProductWithEpisode,
 } from "@/lib/store-service";
+import { getBundleTitle } from "@/lib/bundle-meta";
 
 type SortOption = "recommended" | "newest" | "price_asc" | "price_desc";
 
@@ -36,7 +37,10 @@ function ProductGridCard({ product }: { product: ProductWithEpisode }) {
         <p className="text-[12px] text-zinc-400 line-clamp-1">
           {product.bundles.length > 1
             ? `${product.bundles.length} bundles`
-            : `${product.episodeRoomType} Bundle`}
+            : getBundleTitle({
+                roomType: product.episodeRoomType,
+                reelType: product.bundles[0]?.reelType ?? "upgrade",
+              })}
         </p>
         {product.tags.length > 0 && (
           <div className="flex flex-wrap gap-1 mt-1">

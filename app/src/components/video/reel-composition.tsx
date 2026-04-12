@@ -351,31 +351,39 @@ function ProductSlide({ item, palette }: { item: Item; index: number; palette: R
 function CTASlide({
   roomType,
   budgetPhrase,
+  reelType = "upgrade",
   delays,
   palette,
 }: {
   roomType: string;
   budgetPhrase: string;
+  reelType?: "create" | "upgrade";
   delays?: { commentDelay: number; followDelay: number };
   palette: ReelPalette;
 }) {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
+  const showBudgetStage = reelType === "create";
+  const budgetLabel = reelType === "create" ? "Design Total" : "Total Upgrade";
 
   // Stage 1: "Total upgrade for under $X" (0.0s)
   const pop1 = spring({ frame, fps, config: { damping: 12, mass: 1, stiffness: 200 } });
 
   // Stage 2: NLP Synced! "Comment [roomType]" (Variable Audio Bound)
-  const p2Start = delays ? Math.round(delays.commentDelay * fps) : Math.floor(fps * 1.5);
+  const p2Start = delays
+    ? Math.round(delays.commentDelay * fps)
+    : Math.floor(fps * (showBudgetStage ? 1.5 : 0.3));
   const pop2 = spring({ frame: frame - p2Start, fps, config: { damping: 10, mass: 1, stiffness: 180 } });
-  const slideUp1 = interpolate(pop2, [0, 1], [0, -220]); // Pushes Stage 1 up
-  const scaleDown1 = interpolate(pop2, [0, 1], [1, 0.8]);
+  const slideUp1 = showBudgetStage ? interpolate(pop2, [0, 1], [0, -220]) : 0;
+  const scaleDown1 = showBudgetStage ? interpolate(pop2, [0, 1], [1, 0.8]) : 1;
 
   // Stage 2.5: "...Or check bio!" (Fires 0.4s after the Comment bubble)
   const pop2_5 = spring({ frame: frame - (p2Start + 12), fps, config: { damping: 12, mass: 1, stiffness: 220 } });
 
   // Stage 3: NLP Synced! "Follow @hackmyapartment" (Variable Audio Bound)
-  const p3Start = delays ? Math.round(delays.followDelay * fps) : Math.floor(fps * 3.2);
+  const p3Start = delays
+    ? Math.round(delays.followDelay * fps)
+    : Math.floor(fps * (showBudgetStage ? 3.2 : 1.9));
   const pop3 = spring({ frame: frame - p3Start, fps, config: { damping: 10, mass: 1, stiffness: 250 } });
   const slideUp2 = interpolate(pop3, [0, 1], [0, -140]); // Pushes everything up further
 
@@ -388,44 +396,45 @@ function CTASlide({
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          gap: 40,
+          gap: showBudgetStage ? 40 : 28,
           transform: `translateY(${slideUp1 + slideUp2}px)`,
         }}
       >
-        {/* Stage 1: Budget Hook */}
-        <div style={{ transform: `scale(${pop1 * scaleDown1})`, textAlign: "center" }}>
-          <div
-            style={{
-              fontSize: 64,
-              fontWeight: 900,
-              textTransform: "uppercase",
-              color: palette.text,
-              background: palette.primary,
-              padding: "16px 40px",
-              borderRadius: 100,
-              display: "inline-block",
-              boxShadow: "0 20px 40px rgba(0,0,0,0.3)",
-              marginBottom: 20,
-              letterSpacing: "-0.02em"
-            }}
-          >
-            Total Upgrade
+        {showBudgetStage && (
+          <div style={{ transform: `scale(${pop1 * scaleDown1})`, textAlign: "center" }}>
+            <div
+              style={{
+                fontSize: 64,
+                fontWeight: 900,
+                textTransform: "uppercase",
+                color: palette.text,
+                background: palette.primary,
+                padding: "16px 40px",
+                borderRadius: 100,
+                display: "inline-block",
+                boxShadow: "0 20px 40px rgba(0,0,0,0.3)",
+                marginBottom: 20,
+                letterSpacing: "-0.02em"
+              }}
+            >
+              {budgetLabel}
+            </div>
+            <br />
+            <div
+              style={{
+                fontSize: 88,
+                fontWeight: 900,
+                textTransform: "uppercase",
+                color: palette.secondary,
+                textShadow: "8px 8px 0px #000",
+                letterSpacing: "-0.03em",
+                lineHeight: 1
+              }}
+            >
+              {budgetPhrase}
+            </div>
           </div>
-          <br />
-          <div
-            style={{
-              fontSize: 88,
-              fontWeight: 900,
-              textTransform: "uppercase",
-              color: palette.secondary,
-              textShadow: "8px 8px 0px #000",
-              letterSpacing: "-0.03em",
-              lineHeight: 1
-            }}
-          >
-            {budgetPhrase}
-          </div>
-        </div>
+        )}
 
         {/* Stage 2: Comment Bubble */}
         <div
@@ -608,7 +617,13 @@ export function ReelComposition({
       from={ctaFrom}
       durationInFrames={ctaFrames}
     >
-      <CTASlide roomType={roomType} budgetPhrase={budgetPhrase} delays={timings?.ctaStages} palette={palette} />
+      <CTASlide
+        roomType={roomType}
+        budgetPhrase={budgetPhrase}
+        reelType={reelType}
+        delays={timings?.ctaStages}
+        palette={palette}
+      />
     </Sequence>
   );
 

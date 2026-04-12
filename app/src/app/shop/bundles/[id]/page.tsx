@@ -8,8 +8,15 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { ShopHeader } from "@/components/shop/shop-header";
-import { getEpisodeById, getRoomGradient } from "@/lib/store-service";
+import { getEpisodeById } from "@/lib/store-service";
 import { Episode, Item } from "@/lib/types";
+import {
+  getBundlePriceCaption,
+  getBundlePriceLabel,
+  getBundleTheme,
+  getBundleTitle,
+} from "@/lib/bundle-meta";
+import { getRoomFallbackImage } from "@/lib/room-images";
 
 function ProductRow({ item }: { item: Item }) {
   return (
@@ -86,8 +93,8 @@ export default function BundleDetailPage() {
       </div>
     );
   }
-
-  const total = episode.items.reduce((s, i) => s + i.amount, 0);
+  const theme = getBundleTheme(episode);
+  const heroImage = episode.roomImageUrl || getRoomFallbackImage(episode.roomType, episode.id);
 
   return (
     <div className="min-h-screen bg-white text-zinc-900">
@@ -100,33 +107,29 @@ export default function BundleDetailPage() {
           <span className="mx-1.5">/</span>
           <Link href="/shop/bundles" className="hover:text-zinc-600 transition">Bundles</Link>
           <span className="mx-1.5">/</span>
-          <span className="text-zinc-700 font-medium">{episode.roomType}</span>
+          <span className="text-zinc-700 font-medium">{getBundleTitle(episode)}</span>
         </div>
 
         {/* Hero image */}
         <div className="rounded-2xl overflow-hidden border border-zinc-200 h-48 sm:h-64">
-          {episode.roomImageUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={episode.roomImageUrl} alt={episode.roomType} className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-full h-full" style={{ background: getRoomGradient(episode.roomType) }} />
-          )}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={heroImage} alt={episode.roomType} className="w-full h-full object-cover" />
         </div>
 
         {/* Bundle info */}
         <div className="flex items-start justify-between flex-wrap gap-3">
           <div>
-            <h1 className="text-2xl font-bold text-zinc-900">{episode.roomType} Bundle</h1>
-            {episode.theme?.trim() && (
+            <h1 className="text-2xl font-bold text-zinc-900">{getBundleTitle(episode)}</h1>
+            {theme && (
               <p className="text-sm text-zinc-500 mt-1">
-                Theme: {episode.theme.trim()}
+                Theme: {theme}
               </p>
             )}
-            <p className="text-sm text-zinc-400 mt-1">{episode.items.length} products · {episode.budgetPhrase}</p>
+            <p className="text-sm text-zinc-400 mt-1">{episode.items.length} products</p>
           </div>
           <div className="text-right">
-            <p className="text-2xl font-bold text-zinc-900">${total.toFixed(2)}</p>
-            <p className="text-xs text-zinc-400">total for all items</p>
+            <p className="text-2xl font-bold text-zinc-900">{getBundlePriceLabel(episode)}</p>
+            <p className="text-xs text-zinc-400">{getBundlePriceCaption(episode)}</p>
           </div>
         </div>
 

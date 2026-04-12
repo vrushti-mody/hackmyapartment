@@ -22,6 +22,8 @@ function isEmbeddedItem(value: unknown): value is {
 
 interface LeanEpisodeWithItems {
   id?: string;
+  reelType?: string;
+  theme?: string;
   roomType?: string;
   budgetPhrase?: string;
   roomImageUrl?: string;

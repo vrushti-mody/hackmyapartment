@@ -12,7 +12,7 @@
  */
 
 import { Item } from "./types";
-import { getUpgradeHook } from "./budget";
+import { formatCurrency, getUpgradeHook } from "./budget";
 
 /** Base aesthetic descriptors per room type. */
 const ROOM_BASE: Record<string, string> = {
@@ -96,7 +96,7 @@ export function generateVoiceoverPrompt(
     .slice(0, 5)
     .map(
       (item, i) =>
-        `${i + 1}. ${item.title} — $${item.amount.toFixed(2)}`
+        `${i + 1}. ${item.title} — ${formatCurrency(item.amount)}`
     )
     .join("\n");
 
@@ -108,8 +108,8 @@ ${productList}
 
 Requirements:
 - Opening hook: 1 short, exciting sentence. No product names yet.
-- Per product: EXACTLY 1 sentence naming the product and its price only. No descriptions, features, benefits, materials, or extra detail.
-- Closing CTA: "Total upgrade for under $${roundedTotal}! Comment ${roomType.toUpperCase()} for product links or check bio. Follow for more."
+- Per product: EXACTLY 1 sentence naming the product and its exact price only. Do not round, simplify, or remove cents. No descriptions, features, benefits, materials, or extra detail.
+- Closing CTA: "Comment ${roomType.toUpperCase()} for product links or check bio. Follow @hackmyapartment for more."
 - Separate each section with a blank line.
 - Total: ~100 words for a fast-paced natural reading pace.
 - Tone: upbeat, conversational, like a popular content creator.
@@ -118,13 +118,13 @@ Requirements:
 
   return `Write a punchy 60-second Instagram Reel voiceover script for upgrading a ${roomType.toLowerCase()}${themeStr}.
 
-Products featured (under $${roundedTotal} total):
+Products featured:
 ${productList}
 
 Requirements:
 - Opening hook: Write exactly this: "${upgradeHook}"
-- Per product: EXACTLY 1 sentence naming the product and its price only. No descriptions, features, benefits, materials, or extra detail.
-- Closing CTA: "Total upgrade for under $${roundedTotal}! Comment ${roomType.toUpperCase()} for product links or check bio. Follow for more."
+- Per product: EXACTLY 1 sentence naming the product and its exact price only. Do not round, simplify, or remove cents. No descriptions, features, benefits, materials, or extra detail.
+- Closing CTA: "Comment ${roomType.toUpperCase()} for product links or check bio. Follow @hackmyapartment for more."
 - Separate each section with a blank line.
 - Total: ~100 words for a fast-paced natural reading pace.
 - Tone: upbeat, conversational, like a popular content creator.

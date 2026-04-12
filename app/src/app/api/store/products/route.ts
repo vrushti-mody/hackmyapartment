@@ -29,7 +29,7 @@ export async function GET() {
       ProductModel.find({}).sort({ updatedAt: -1 }),
       EpisodeModel.find({})
         .sort({ createdAt: -1 })
-        .select("id roomType budgetPhrase roomImageUrl createdAt items"),
+        .select("id reelType theme roomType budgetPhrase roomImageUrl createdAt items"),
     ]);
 
     const bundlesByProductId = new Map<string, ReturnType<typeof toBundleSummary>[]>();

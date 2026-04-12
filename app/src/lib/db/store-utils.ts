@@ -9,6 +9,8 @@ import {
 
 export interface BundleSummary {
   id: string;
+  reelType: "create" | "upgrade";
+  theme?: string;
   roomType: string;
   budgetPhrase: string;
   roomImageUrl?: string;
@@ -17,6 +19,8 @@ export interface BundleSummary {
 
 type BundleSummarySource = {
   id?: unknown;
+  reelType?: unknown;
+  theme?: unknown;
   roomType?: unknown;
   budgetPhrase?: unknown;
   roomImageUrl?: unknown;
@@ -137,6 +141,8 @@ export async function deleteOrphanProducts() {
 export function toBundleSummary(episode: BundleSummarySource): BundleSummary {
   return {
     id: String(episode.id || ""),
+    reelType: episode.reelType === "create" ? "create" : "upgrade",
+    theme: typeof episode.theme === "string" ? episode.theme : undefined,
     roomType: String(episode.roomType || ""),
     budgetPhrase: String(episode.budgetPhrase || ""),
     roomImageUrl:

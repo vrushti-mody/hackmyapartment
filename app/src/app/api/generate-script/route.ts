@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getUpgradeHook } from "@/lib/budget";
+import { formatCurrency, getUpgradeHook } from "@/lib/budget";
 
 interface ScriptRequestItem {
   amount: number;
@@ -66,15 +66,12 @@ Write exactly this: "${getUpgradeHook(roomType, capped)}."`;
       const title = sanitizeForPrompt(item.title);
       return `CHUNK ${idx + 2} (Product ${idx + 1}):
 Product name: ${title}
-Price: ${Math.floor(item.amount)} dollars
-Write ONE complete sentence (8-14 words) naming this product and its price only.
+Price: ${formatCurrency(item.amount)}
+Write ONE complete sentence (8-14 words) naming this product and its exact price only.
 Do NOT mention descriptions, features, benefits, materials, style, or reasons to buy.`;
     });
 
-    const ctaText =
-      reelType === "create"
-        ? `Comment ${roomType.toUpperCase()} for product links or check bio. Follow for more.`
-        : `Total upgrade for under ${Math.ceil(items.reduce((sum, item) => sum + item.amount, 0))} dollars! Comment ${roomType.toUpperCase()} for product links or check bio. Follow for more.`;
+    const ctaText = `Comment ${roomType.toUpperCase()} for product links or check bio. Follow @hackmyapartment for more.`;
 
     const ctaChunk = `CHUNK ${capped.length + 2} (Closing CTA):
 Write exactly this: "${ctaText}"`;
@@ -91,7 +88,7 @@ GLOBAL RULES (strictly follow every one):
 - Output ONLY the script text. No labels, no "CHUNK" headers, no markdown, no asterisks, no dashes or em-dashes.
 - Separate every chunk with exactly one blank line (double newline) and nothing else.
 - NEVER use dashes (hyphen, en-dash, em-dash). Use commas or periods instead.
-- Write dollar amounts as the number followed by the word "dollars" (e.g. "79 dollars").
+- Use the exact price shown for each product. Do not round, simplify, or remove cents.
 - Every sentence must be grammatically complete. Never end a chunk mid-sentence.
 - Keep every chunk SHORT. One sentence each. Punchy and energetic.
 - Tone: fast, excited, conversational, like a popular content creator.

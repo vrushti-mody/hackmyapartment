@@ -15,6 +15,15 @@ function roundUpToNearest(value: number, increment: number): number {
   return Math.ceil(value / increment) * increment;
 }
 
+export function getRawTotal(items: PricedItem[]): number {
+  return items.reduce((sum, item) => sum + item.amount, 0);
+}
+
+export function formatCurrency(amount: number): string {
+  if (!Number.isFinite(amount)) return "$0";
+  return `$${Number.isInteger(amount) ? amount.toFixed(0) : amount.toFixed(2)}`;
+}
+
 /** Round a dollar total up to the nearest $50 increment. */
 export function getRoundedTotal(total: number): number {
   return roundUpToNearest(total, 50);
@@ -44,4 +53,14 @@ export function getUpgradeHook(roomType: string, items: PricedItem[]): string {
   if (!roomType.trim() || roundedMaxItem === 0) return "";
 
   return `Upgrade your ${roomType.toLowerCase()} with these finds that cost $${roundedMaxItem} and under`;
+}
+
+export function getUpgradeBundlePrice(items: PricedItem[]): number {
+  if (items.length === 0) return 0;
+  return Math.ceil(items.reduce((highest, item) => Math.max(highest, item.amount), 0));
+}
+
+export function getUpgradeBundlePriceLabel(items: PricedItem[]): string {
+  const roundedMaxItem = getUpgradeBundlePrice(items);
+  return roundedMaxItem > 0 ? `$${roundedMaxItem} and under` : "";
 }

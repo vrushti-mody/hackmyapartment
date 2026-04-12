@@ -7,46 +7,51 @@
 import Link from "next/link";
 import { useState, useEffect, useMemo } from "react";
 import { ShopHeader } from "@/components/shop/shop-header";
-import { getEpisodes, getCategories, getRoomGradient } from "@/lib/store-service";
+import { getEpisodes, getCategories } from "@/lib/store-service";
 import { Episode } from "@/lib/types";
+import {
+  BundleKind,
+  getBundleKind,
+  getBundlePriceLabel,
+  getBundlePriceValue,
+  getBundleTheme,
+  getBundleTitle,
+} from "@/lib/bundle-meta";
+import { getRoomFallbackImage } from "@/lib/room-images";
 
 type SortOption = "recommended" | "newest" | "price_asc" | "price_desc";
-
-function totalPrice(ep: Episode) {
-  return ep.items.reduce((s, i) => s + i.amount, 0);
-}
+type BundleTypeFilter = "all" | BundleKind;
 
 function BundleGridCard({ episode }: { episode: Episode }) {
-  const total = totalPrice(episode);
-  const theme = episode.theme?.trim();
+  const theme = getBundleTheme(episode);
+  const bundleKind = getBundleKind(episode.reelType);
+  const heroImage = episode.roomImageUrl || getRoomFallbackImage(episode.roomType, episode.id);
   return (
     <Link
       href={`/shop/bundles/${episode.id}`}
       className="group bg-white border border-zinc-200 rounded-2xl overflow-hidden hover:border-zinc-300 hover:shadow-md transition-all duration-200 flex flex-col"
     >
       <div className="h-44 sm:h-52 overflow-hidden relative">
-        {episode.roomImageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={episode.roomImageUrl} alt={episode.roomType} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-        ) : (
-          <div className="w-full h-full" style={{ background: getRoomGradient(episode.roomType) }} />
-        )}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={heroImage} alt={episode.roomType} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
         <span className="absolute top-2.5 left-2.5 bg-white/90 backdrop-blur-sm text-zinc-700 text-[11px] font-semibold px-2.5 py-1 rounded-full border border-white/20">
-          {episode.items.length} items
+          {bundleKind === "design" ? "Design Bundle" : "Upgrade Bundle"}
         </span>
       </div>
       <div className="p-4 flex-1 flex flex-col justify-between">
         <div>
-          <h3 className="font-semibold text-[15px] text-zinc-800">{episode.roomType} Bundle</h3>
+          <h3 className="font-semibold text-[15px] text-zinc-800">{getBundleTitle(episode)}</h3>
           {theme && (
             <p className="text-xs text-zinc-500 mt-1 line-clamp-2">
               Theme: {theme}
             </p>
           )}
-          <p className="text-xs text-zinc-400 mt-1">{episode.budgetPhrase}</p>
+          <p className="text-xs text-zinc-400 mt-1">
+            {episode.items.length} items
+          </p>
         </div>
         <div className="flex items-center justify-between mt-3">
-          <span className="font-bold text-base text-zinc-900">${total.toFixed(2)}</span>
+          <span className="font-bold text-base text-zinc-900">{getBundlePriceLabel(episode)}</span>
           <span className="text-xs text-zinc-400 group-hover:text-zinc-600 transition">View bundle →</span>
         </div>
       </div>
@@ -57,6 +62,7 @@ function BundleGridCard({ episode }: { episode: Episode }) {
 export default function BundlesPage() {
   const [episodes, setEpisodes] = useState<Episode[]>([]);
   const [category, setCategory] = useState("All");
+  const [bundleType, setBundleType] = useState<BundleTypeFilter>("all");
   const [sort, setSort] = useState<SortOption>("recommended");
   const [query, setQuery] = useState("");
   const [loaded, setLoaded] = useState(false);
@@ -81,13 +87,19 @@ export default function BundlesPage() {
     // Category filter
     if (category !== "All") results = results.filter((e) => e.roomType === category);
 
+    if (bundleType !== "all") {
+      results = results.filter((episode) => getBundleKind(episode.reelType) === bundleType);
+    }
+
     // Search
     if (query.trim()) {
       const q = query.toLowerCase().trim();
       results = results.filter(
         (e) =>
+          getBundleTitle(e).toLowerCase().includes(q) ||
+          getBundleKind(e.reelType).includes(q) ||
           e.roomType.toLowerCase().includes(q) ||
-          (e.theme || "").toLowerCase().includes(q) ||
+          getBundleTheme(e).toLowerCase().includes(q) ||
           e.items.some(
             (i) =>
               i.title.toLowerCase().includes(q) ||
@@ -98,12 +110,12 @@ export default function BundlesPage() {
 
     // Sort
     if (sort === "newest") results = [...results].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    else if (sort === "price_asc") results = [...results].sort((a, b) => totalPrice(a) - totalPrice(b));
-    else if (sort === "price_desc") results = [...results].sort((a, b) => totalPrice(b) - totalPrice(a));
+    else if (sort === "price_asc") results = [...results].sort((a, b) => getBundlePriceValue(a) - getBundlePriceValue(b));
+    else if (sort === "price_desc") results = [...results].sort((a, b) => getBundlePriceValue(b) - getBundlePriceValue(a));
     // "recommended" keeps original order (will be click-based once DB is hooked)
 
     return results;
-  }, [episodes, category, query, sort]);
+  }, [episodes, category, bundleType, query, sort]);
 
   if (!loaded) return (<div className="min-h-screen bg-zinc-50 flex items-center justify-center"><div className="text-sm text-zinc-400 animate-pulse">Loading…</div></div>);
 
@@ -123,7 +135,7 @@ export default function BundlesPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-zinc-900">All Bundles</h1>
-            <p className="text-sm text-zinc-400 mt-1">{filtered.length} curated room bundles</p>
+            <p className="text-sm text-zinc-400 mt-1">{filtered.length} curated design and upgrade bundles</p>
           </div>
           <div className="relative w-full sm:w-72">
             <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -146,6 +158,28 @@ export default function BundlesPage() {
 
         {/* Filters + Sort */}
         <div className="flex flex-wrap gap-3 items-center">
+          <div className="flex flex-wrap gap-2">
+            {([
+              ["all", "All Types"],
+              ["design", "Design"],
+              ["upgrade", "Upgrade"],
+            ] as const).map(([value, label]) => (
+              <button
+                key={value}
+                onClick={() => setBundleType(value)}
+                className={`px-3.5 py-1.5 rounded-full text-sm font-medium border transition ${
+                  bundleType === value
+                    ? "bg-zinc-900 text-white border-zinc-900"
+                    : "bg-white text-zinc-600 border-zinc-200 hover:border-zinc-400"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          <div className="hidden sm:block h-6 w-px bg-zinc-200" />
+
           {/* Category pills */}
           <div className="flex flex-wrap gap-2">
             {categories.map((cat) => (
@@ -192,7 +226,7 @@ export default function BundlesPage() {
         ) : (
           <div className="text-center py-16">
             <p className="text-zinc-400">No bundles match your search.</p>
-            <button onClick={() => { setQuery(""); setCategory("All"); }} className="text-sm text-zinc-500 hover:text-zinc-700 underline mt-2">
+            <button onClick={() => { setQuery(""); setCategory("All"); setBundleType("all"); }} className="text-sm text-zinc-500 hover:text-zinc-700 underline mt-2">
               Clear filters
             </button>
           </div>

@@ -80,6 +80,8 @@ export async function deleteEpisode(id: string): Promise<void> {
 export interface ProductWithEpisode extends Item {
   bundles: Array<{
     id: string;
+    reelType: "create" | "upgrade";
+    theme?: string;
     roomType: string;
     budgetPhrase: string;
     roomImageUrl?: string;
@@ -97,6 +99,8 @@ function deriveProductsFromEpisodes(episodes: Episode[]): ProductWithEpisode[] {
   for (const episode of episodes) {
     const bundle = {
       id: episode.id,
+      reelType: episode.reelType,
+      theme: episode.theme,
       roomType: episode.roomType,
       budgetPhrase: episode.budgetPhrase,
       roomImageUrl: episode.roomImageUrl,
