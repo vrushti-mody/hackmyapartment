@@ -134,9 +134,9 @@ async function transcodeWebmToMp4(
   }
 }
 
-/** Map an external URL directly to the CORS proxy with a cache buster. */
-function getProxiedUrl(url: string, index?: number | string): string {
-  if (url.startsWith("blob:") || url.startsWith("data:")) return url;
+/** Fetch any external URL through the CORS proxy and return a Base64 data: URI to avoid worker CORS cross-origin bugs entirely. */
+async function fetchAsDataUri(url: string): Promise<string> {
+  if (url.startsWith("data:") || url.startsWith("blob:")) return url;
 
   const base = typeof window !== "undefined" ? window.location.origin : "";
   const proxyUrl = url.startsWith("/") || url.includes("/api/proxy-image?")
@@ -145,7 +145,18 @@ function getProxiedUrl(url: string, index?: number | string): string {
   
   const absoluteUrl = proxyUrl.startsWith("/") ? `${base}${proxyUrl}` : proxyUrl;
   const sep = absoluteUrl.includes("?") ? "&" : "?";
-  return `${absoluteUrl}${sep}cb=${Date.now()}_${index ?? "m"}`;
+  const finalUrl = `${absoluteUrl}${sep}cb=${Date.now()}`;
+
+  const res = await fetch(finalUrl, { cache: "no-store" });
+  if (!res.ok) throw new Error(`Failed to fetch asset: ${res.status}`);
+  const blob = await res.blob();
+
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
 }
 
 export function VideoPreview({
@@ -185,15 +196,22 @@ export function VideoPreview({
 
   const safeSlug = roomType.toLowerCase().replace(/\s+/g, "-");
 
-  /** Pre-format URLs to immediately use proxy. */
+  /** Pre-fetch every image to a Base64 string to completely avoid Browser/Worker URL bugs. */
   async function buildRenderInputProps(): Promise<ReelCompositionProps> {
+    const [roomDataUri, ...itemDataUris] = await Promise.all([
+      roomImageUrl ? fetchAsDataUri(roomImageUrl) : Promise.resolve(undefined),
+      ...items.map((item) =>
+        item.imageUrl ? fetchAsDataUri(item.imageUrl) : Promise.resolve("")
+      ),
+    ]);
+
     return {
       ...previewProps,
-      roomImageUrl: roomImageUrl ? getProxiedUrl(roomImageUrl, "room") : undefined,
-      audioUrl: audioUrl, // keep as is
+      roomImageUrl: roomDataUri,
+      audioUrl: audioUrl, // keep audio as is
       items: items.map((item, i) => ({
         ...item,
-        imageUrl: item.imageUrl ? getProxiedUrl(item.imageUrl, i) : item.imageUrl,
+        imageUrl: itemDataUris[i] || item.imageUrl,
       })),
     };
   }
