@@ -148,7 +148,10 @@ async function fetchAsDataUri(url: string): Promise<string> {
   const finalUrl = `${absoluteUrl}${sep}cb=${Date.now()}`;
 
   const res = await fetch(finalUrl, { cache: "no-store" });
-  if (!res.ok) throw new Error(`Failed to fetch asset: ${res.status}`);
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(errText || `Failed to fetch asset: ${res.status}`);
+  }
   const blob = await res.blob();
 
   return new Promise((resolve, reject) => {

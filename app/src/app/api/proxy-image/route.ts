@@ -43,6 +43,14 @@ export async function GET(req: NextRequest) {
     }
 
     const contentType = response.headers.get("content-type") || "image/jpeg";
+
+    if (contentType.includes("text/html")) {
+      return new NextResponse(
+        `The image URL returned an HTML page instead of an image. If this is a Google Drive link, make sure it is explicitly shared as "Anyone with the link".`,
+        { status: 403 }
+      );
+    }
+
     const buffer = await response.arrayBuffer();
 
     return new NextResponse(buffer, {
