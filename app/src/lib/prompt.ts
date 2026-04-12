@@ -96,7 +96,7 @@ export function generateVoiceoverPrompt(
     .slice(0, 5)
     .map(
       (item, i) =>
-        `${i + 1}. ${item.title} — ${formatCurrency(item.amount)}`
+        `${i + 1}. ${item.title} — ${formatCurrency(Math.round(item.amount))}`
     )
     .join("\n");
 
@@ -108,7 +108,7 @@ ${productList}
 
 Requirements:
 - Opening hook: 1 short, exciting sentence. No product names yet.
-- Per product: EXACTLY 1 sentence naming the product and its exact price only. Do not round, simplify, or remove cents. No descriptions, features, benefits, materials, or extra detail.
+- Per product: EXACTLY 1 sentence naming the product and its price only. No descriptions, features, benefits, materials, or extra detail.
 - Closing CTA: "Comment ${roomType.toUpperCase()} for product links or check bio. Follow @hackmyapartment for more."
 - Separate each section with a blank line.
 - Total: ~100 words for a fast-paced natural reading pace.
@@ -123,7 +123,7 @@ ${productList}
 
 Requirements:
 - Opening hook: Write exactly this: "${upgradeHook}"
-- Per product: EXACTLY 1 sentence naming the product and its exact price only. Do not round, simplify, or remove cents. No descriptions, features, benefits, materials, or extra detail.
+- Per product: EXACTLY 1 sentence naming the product and its price only. No descriptions, features, benefits, materials, or extra detail.
 - Closing CTA: "Comment ${roomType.toUpperCase()} for product links or check bio. Follow @hackmyapartment for more."
 - Separate each section with a blank line.
 - Total: ~100 words for a fast-paced natural reading pace.

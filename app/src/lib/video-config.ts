@@ -14,7 +14,7 @@ import type { AudioTimingMapping } from "./audio-alignment";
 export const VIDEO_WIDTH = 1080;
 export const VIDEO_HEIGHT = 1920;
 export const VIDEO_FPS = 30;
-export const AUDIO_PLAYBACK_RATE = 1.2;
+export const AUDIO_PLAYBACK_RATE = 1.1;
 
 // Fixed segment durations in seconds.
 export const CTA_DURATION_SECONDS = 4;

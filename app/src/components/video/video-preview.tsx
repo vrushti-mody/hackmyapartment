@@ -134,18 +134,18 @@ async function transcodeWebmToMp4(
   }
 }
 
-/** Fetch any external URL through the CORS proxy and return a unique blob: URL. */
-async function fetchAsBlob(url: string): Promise<string> {
+/** Map an external URL directly to the CORS proxy with a cache buster. */
+function getProxiedUrl(url: string, index?: number | string): string {
   if (url.startsWith("blob:") || url.startsWith("data:")) return url;
 
+  const base = typeof window !== "undefined" ? window.location.origin : "";
   const proxyUrl = url.startsWith("/") || url.includes("/api/proxy-image?")
     ? url
-    : `${window.location.origin}/api/proxy-image?url=${encodeURIComponent(url)}`;
-
-  const res = await fetch(proxyUrl, { cache: "no-store" });
-  if (!res.ok) throw new Error(`Failed to fetch asset: ${res.status}`);
-  const blob = await res.blob();
-  return URL.createObjectURL(blob);
+    : `/api/proxy-image?url=${encodeURIComponent(url)}`;
+  
+  const absoluteUrl = proxyUrl.startsWith("/") ? `${base}${proxyUrl}` : proxyUrl;
+  const sep = absoluteUrl.includes("?") ? "&" : "?";
+  return `${absoluteUrl}${sep}cb=${Date.now()}_${index ?? "m"}`;
 }
 
 export function VideoPreview({
@@ -185,32 +185,15 @@ export function VideoPreview({
 
   const safeSlug = roomType.toLowerCase().replace(/\s+/g, "-");
 
-  /** Pre-fetch every image to a unique blob URL so Remotion can't mix them up. */
+  /** Pre-format URLs to immediately use proxy. */
   async function buildRenderInputProps(): Promise<ReelCompositionProps> {
-    // Revoke any previously created blob URLs
-    blobUrlsRef.current.forEach((u) => URL.revokeObjectURL(u));
-    blobUrlsRef.current = [];
-
-    const track = (url: string) => {
-      blobUrlsRef.current.push(url);
-      return url;
-    };
-
-    const [roomBlob, audioBlob, ...itemBlobs] = await Promise.all([
-      roomImageUrl ? fetchAsBlob(roomImageUrl).then(track) : Promise.resolve(undefined),
-      audioUrl ? Promise.resolve(audioUrl) : Promise.resolve(undefined), // audio is already a blob:
-      ...items.map((item) =>
-        item.imageUrl ? fetchAsBlob(item.imageUrl).then(track) : Promise.resolve("")
-      ),
-    ]);
-
     return {
       ...previewProps,
-      roomImageUrl: roomBlob,
-      audioUrl: audioBlob,
+      roomImageUrl: roomImageUrl ? getProxiedUrl(roomImageUrl, "room") : undefined,
+      audioUrl: audioUrl, // keep as is
       items: items.map((item, i) => ({
         ...item,
-        imageUrl: itemBlobs[i] || item.imageUrl,
+        imageUrl: item.imageUrl ? getProxiedUrl(item.imageUrl, i) : item.imageUrl,
       })),
     };
   }

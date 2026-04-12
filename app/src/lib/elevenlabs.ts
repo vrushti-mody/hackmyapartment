@@ -13,6 +13,18 @@ import { DEFAULT_ELEVENLABS_VOICE_ID } from "./voice";
  * Voice settings use moderate stability (0.5) and high similarity boost (0.75)
  * to sound natural but consistent across episodes.
  */
+function sanitizeForVoiceover(text: string): string {
+  return text
+    .replace(/(\d+)\s*[xX]\s*(\d+)/g, "$1 by $2")
+    .replace(/(\d+)\s*"/g, "$1 inch")
+    .replace(/(\d+)\s*'/g, "$1 feet")
+    .replace(/\bFT\b/g, "feet")
+    .replace(/\bft\b/g, "feet")
+    .replace(/\bcm\b/gi, "centimeters")
+    .replace(/\bmm\b/gi, "millimeters")
+    .replace(/\blbs\b/gi, "pounds");
+}
+
 export async function generateAudio(
   script: string,
   apiKey: string,
@@ -27,7 +39,7 @@ export async function generateAudio(
         "xi-api-key": apiKey,
       },
       body: JSON.stringify({
-        text: script,
+        text: sanitizeForVoiceover(script),
         model_id: "eleven_multilingual_v2",
         voice_settings: {
           stability: 0.5,
@@ -72,7 +84,7 @@ export async function generateAudioWithTimestamps(
         "xi-api-key": apiKey,
       },
       body: JSON.stringify({
-        text: script,
+        text: sanitizeForVoiceover(script),
         model_id: "eleven_multilingual_v2",
         voice_settings: {
           stability: 0.5,

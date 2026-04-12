@@ -49,10 +49,10 @@ export function generateScript(
   const connectors = ["Next,", "Then,", "And,"];
   const lines = items.map((item, i) => {
     if (i === 0) {
-      return `First, ${item.title} for ${formatCurrency(item.amount)}.`;
+      return `First, ${item.title} for ${formatCurrency(Math.round(item.amount))}.`;
     }
     const connector = connectors[(i - 1) % connectors.length];
-    return `${connector} ${item.title} for ${formatCurrency(item.amount)}.`;
+    return `${connector} ${item.title} for ${formatCurrency(Math.round(item.amount))}.`;
   });
 
   return `${intro}\n\n${lines.join("\n\n")}\n\n${cta}`;

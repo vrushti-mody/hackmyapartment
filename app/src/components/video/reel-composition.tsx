@@ -315,7 +315,7 @@ function ProductSlide({ item, palette }: { item: Item; index: number; palette: R
               zIndex: 10
             }}
           >
-            ${item.amount.toFixed(2)}
+            ${Math.round(item.amount)}
           </div>
         </div>
       )}
