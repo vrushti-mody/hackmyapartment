@@ -319,7 +319,7 @@ function ProductSlide({ item, palette }: { item: Item; index: number; palette: R
               zIndex: 10
             }}
           >
-            ${Math.round(item.amount)}
+            ${item.amount % 1 === 0 ? item.amount : item.amount.toFixed(2)}
           </div>
         </div>
       )}
