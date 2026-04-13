@@ -22,7 +22,7 @@ function ProductGridCard({ product }: { product: ProductWithEpisode }) {
   return (
     <Link
       href={`/shop/products/${product.id}`}
-      className="group bg-white border border-zinc-200 rounded-2xl overflow-hidden hover:border-zinc-300 hover:shadow-sm transition-all duration-200 flex flex-col"
+      className="group bg-white border border-zinc-200 rounded-2xl overflow-hidden hover:border-zinc-300 hover:shadow-sm transition-all duration-200 flex flex-col h-full"
     >
       <div className="h-40 sm:h-48 bg-zinc-50 overflow-hidden">
         {product.imageUrl ? (
@@ -86,7 +86,7 @@ function ProductsContent({ initialQuery }: { initialQuery: string }) {
       );
     }
     
-    if (category !== "All") results = results.filter((p) => p.episodeRoomType === category);
+    if (category !== "All") results = results.filter((p) => p.bundles.some((b) => b.roomType === category));
     if (sort === "newest") { /* will sort by createdAt once DB is hooked */ }
     else if (sort === "price_asc") results = [...results].sort((a, b) => a.amount - b.amount);
     else if (sort === "price_desc") results = [...results].sort((a, b) => b.amount - a.amount);
