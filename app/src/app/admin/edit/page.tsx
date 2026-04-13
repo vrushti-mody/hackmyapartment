@@ -65,6 +65,21 @@ function EditDashboard() {
     setItems((prev) => prev.filter((_, i) => i !== index));
   }
 
+  function addItem() {
+    setItems((prev) => [
+      ...prev,
+      {
+        id: crypto.randomUUID(),
+        title: "",
+        description: "",
+        amount: 0,
+        imageUrl: "",
+        affiliateLink: "",
+        tags: [],
+      },
+    ]);
+  }
+
   async function handleSave() {
     if (!editId || !episode) return;
     setSaving(true);
@@ -291,6 +306,13 @@ function EditDashboard() {
               </div>
             </div>
           ))}
+
+          <button
+            onClick={addItem}
+            className="w-full flex items-center justify-center gap-2 border-2 border-dashed border-zinc-300 hover:border-zinc-400 text-zinc-500 hover:text-zinc-700 font-semibold py-4 rounded-2xl transition"
+          >
+            <span className="text-xl leading-none">+</span> Add Product
+          </button>
         </div>
 
         {/* Bottom save */}
