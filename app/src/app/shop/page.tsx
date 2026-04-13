@@ -57,10 +57,10 @@ function ProductCarouselCard({ product }: { product: ProductWithEpisode }) {
   return (
     <Link
       href={`/shop/products/${product.id}`}
-      className="shrink-0 w-44 snap-start group"
+      className="shrink-0 w-44 snap-start group flex flex-col"
     >
-      <div className="bg-white border border-zinc-200 rounded-2xl overflow-hidden hover:border-zinc-300 hover:shadow-sm transition-all duration-200">
-        <div className="h-32 bg-zinc-50 overflow-hidden">
+      <div className="bg-white border border-zinc-200 rounded-2xl overflow-hidden hover:border-zinc-300 hover:shadow-sm transition-all duration-200 flex flex-col h-full">
+        <div className="h-32 bg-zinc-50 overflow-hidden shrink-0">
           {product.imageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={product.imageUrl} alt={product.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
@@ -68,9 +68,9 @@ function ProductCarouselCard({ product }: { product: ProductWithEpisode }) {
             <div className="w-full h-full flex items-center justify-center text-2xl opacity-20">📦</div>
           )}
         </div>
-        <div className="p-2.5">
+        <div className="p-2.5 flex flex-col flex-1">
           <h4 className="font-semibold text-[13px] text-zinc-800 leading-tight line-clamp-2">{product.title}</h4>
-          <p className="font-bold text-sm text-zinc-900 mt-1">${product.amount.toFixed(2)}</p>
+          <p className="font-bold text-sm text-zinc-900 mt-auto pt-2">${product.amount.toFixed(2)}</p>
         </div>
       </div>
     </Link>
