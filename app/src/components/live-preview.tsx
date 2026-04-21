@@ -19,7 +19,7 @@ import { AppSettings } from "@/components/settings-panel";
 import { getRoundedTotal, getBudgetPhrase, getUpgradeHookPrice } from "@/lib/budget";
 import { generateScript, estimateScriptSeconds } from "@/lib/script";
 import { generateCaption, generateHashtags } from "@/lib/caption";
-import { generateLinksExport, downloadTextFile, downloadBlob } from "@/lib/export";
+import { generateLinksExport, downloadBlob } from "@/lib/export";
 import { generateAudioWithTimestamps, generateAudio } from "@/lib/elevenlabs";
 import { generateRoomPrompt, generateVoiceoverPrompt } from "@/lib/prompt";
 import { VideoPreview } from "@/components/video/video-preview";
@@ -87,6 +87,7 @@ export function LivePreview({
 
   const caption = generateCaption(items, roomType, roundedTotal);
   const hashtags = generateHashtags(roomType);
+  const linksMessage = generateLinksExport(items, roomType);
   const estSecs = estimateScriptSeconds(script);
   const fullCaption = caption ? `${caption}\n\n${hashtags.join(" ")}` : "";
   const canGenerate = !!roomType && items.length > 0;
@@ -338,10 +339,10 @@ export function LivePreview({
           </div>
           <div className="flex gap-2">
             <button
-              onClick={() => { const c = generateLinksExport(items, roomType); downloadTextFile(c, `${roomType.toLowerCase().replace(/\s+/g, "-")}-links.txt`); }}
+              onClick={() => copy(linksMessage, "links")}
               className="flex-1 text-sm font-semibold border border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-700 py-3 rounded-xl transition"
             >
-              Links (.txt)
+              {copiedKey === "links" ? "Copied Links!" : "Copy Links Reply"}
             </button>
             <button
               onClick={() => audioBlobRef.current && downloadBlob(audioBlobRef.current, "voiceover.mp3")}
@@ -349,6 +350,26 @@ export function LivePreview({
             >
               MP3 Audio
             </button>
+          </div>
+          <div className="bg-white border border-zinc-200 rounded-2xl p-4 shadow-sm space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">
+                Comment Reply Links
+              </span>
+              <button
+                onClick={() => copy(linksMessage, "links-inline")}
+                className="text-xs font-semibold text-zinc-600 hover:underline"
+              >
+                {copiedKey === "links-inline" ? "Copied!" : "Copy"}
+              </button>
+            </div>
+            <textarea
+              readOnly
+              value={linksMessage}
+              rows={8}
+              className="w-full text-sm text-zinc-700 p-3 border border-zinc-100 rounded-xl bg-zinc-50 leading-relaxed resize-none cursor-text"
+              onClick={(e) => (e.target as HTMLTextAreaElement).select()}
+            />
           </div>
         </div>
       )}

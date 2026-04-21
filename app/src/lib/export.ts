@@ -10,30 +10,21 @@ import { Item } from "./types";
 
 /** Format items as a plain-text product-links document with affiliate URLs. */
 export function generateLinksExport(items: Item[], roomType: string): string {
+  const commentKeyword = roomType.replace(/\s+/g, "").toUpperCase();
+
   const lines = [
-    `# ${roomType} — Product Links`,
-    `# Generated ${new Date().toISOString()}`,
+    `Hey! Thanks for commenting "${commentKeyword}" on our reel.`,
+    "",
+    `Here are the product links for this ${roomType.toLowerCase()} setup:`,
     "",
     ...items.map(
       (item, i) =>
-        `${i + 1}. ${item.title} — $${item.amount.toFixed(2)}\n   ${item.affiliateLink}`
+        `${i + 1}. ${item.title} - $${item.amount.toFixed(2)}\n${item.affiliateLink}`
     ),
+    "",
+    "Let me know if you want the next bundle too.",
   ];
   return lines.join("\n");
-}
-
-/**
- * Trigger a browser download for a plain-text string.
- * Creates a temporary object URL, clicks a hidden anchor, then cleans up.
- */
-export function downloadTextFile(content: string, filename: string): void {
-  const blob = new Blob([content], { type: "text/plain" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
 }
 
 /** Trigger a browser download for an arbitrary Blob (audio, video, etc.). */

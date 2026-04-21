@@ -11,6 +11,7 @@ import { HorizontalCarousel } from "@/components/shop/horizontal-carousel";
 import { getEpisodes, getAllProducts, type ProductWithEpisode } from "@/lib/store-service";
 import { Episode } from "@/lib/types";
 import {
+  getBundleLabelMap,
   getBundleKind,
   getBundlePriceLabel,
   getBundleTheme,
@@ -20,7 +21,13 @@ import { getRoomFallbackImage } from "@/lib/room-images";
 
 const INSTAGRAM_URL = "https://www.instagram.com/hackmyapartment/";
 
-function BundleCarouselCard({ episode }: { episode: Episode }) {
+function BundleCarouselCard({
+  episode,
+  displayTitle,
+}: {
+  episode: Episode;
+  displayTitle: string;
+}) {
   const theme = getBundleTheme(episode);
   const bundleKind = getBundleKind(episode.reelType);
   const heroImage = episode.roomImageUrl || getRoomFallbackImage(episode.roomType, episode.id);
@@ -38,7 +45,7 @@ function BundleCarouselCard({ episode }: { episode: Episode }) {
           </span>
         </div>
         <div className="p-3">
-          <h3 className="font-semibold text-sm text-zinc-800">{getBundleTitle(episode)}</h3>
+          <h3 className="font-semibold text-sm text-zinc-800">{displayTitle || getBundleTitle(episode)}</h3>
           {theme && (
             <p className="text-[11px] text-zinc-500 mt-1 line-clamp-1">
               Theme: {theme}
@@ -96,6 +103,7 @@ export default function ShopHomePage() {
 
   const designBundles = episodes.filter((episode) => episode.reelType === "create");
   const upgradeBundles = episodes.filter((episode) => episode.reelType !== "create");
+  const bundleLabels = getBundleLabelMap(episodes);
 
   return (
     <div className="min-h-screen bg-white text-zinc-900">
@@ -123,7 +131,7 @@ export default function ShopHomePage() {
         {designBundles.length > 0 && (
           <HorizontalCarousel title="Design Bundles" viewAllHref="/shop/bundles">
             {designBundles.map((ep) => (
-              <BundleCarouselCard key={ep.id} episode={ep} />
+              <BundleCarouselCard key={ep.id} episode={ep} displayTitle={bundleLabels.get(ep.id) || getBundleTitle(ep)} />
             ))}
           </HorizontalCarousel>
         )}
@@ -131,7 +139,7 @@ export default function ShopHomePage() {
         {upgradeBundles.length > 0 && (
           <HorizontalCarousel title="Upgrade Bundles" viewAllHref="/shop/bundles">
             {upgradeBundles.map((ep) => (
-              <BundleCarouselCard key={ep.id} episode={ep} />
+              <BundleCarouselCard key={ep.id} episode={ep} displayTitle={bundleLabels.get(ep.id) || getBundleTitle(ep)} />
             ))}
           </HorizontalCarousel>
         )}

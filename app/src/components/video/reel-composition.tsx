@@ -31,6 +31,7 @@ import {
 } from "../../lib/video-config";
 import { AudioTimingMapping } from "../../lib/audio-alignment";
 import { getUpgradeHookPrice } from "../../lib/budget";
+import { getRoomFallbackImages } from "@/lib/room-images";
 
 export interface ReelCompositionProps extends Record<string, unknown> {
   items: Item[];
@@ -71,42 +72,9 @@ export const PALETTES: ReelPalette[] = [
   { primary: "#7c3aed", secondary: "#fb923c", tertiary: "#22d3ee", text: "#fff", textSecondary: "#000" },
 ];
 
-const ROOM_FALLBACKS: Record<string, string[]> = {
-  "living room": [
-    "https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?q=80&w=1080&auto=format&fit=crop", // Stylish neutral sofa
-    "https://images.unsplash.com/photo-1583847268964-b28ce8faba0f?q=80&w=1080&auto=format&fit=crop", // Warm modern living room
-    "https://images.unsplash.com/photo-1593696140826-c58b021acf8b?q=80&w=1080&auto=format&fit=crop", // Clean light living space
-    "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?q=80&w=1080&auto=format&fit=crop", // Aesthetic beige boho
-    "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?q=80&w=1080&auto=format&fit=crop", // Modern minimalist interior
-  ],
-  "bedroom": [
-    "https://images.unsplash.com/photo-1616594039964-ae9021a400a0?q=80&w=1080&auto=format&fit=crop", // Moody minimalist bedroom
-    "https://images.unsplash.com/photo-1505693314120-0d443867891c?q=80&w=1080&auto=format&fit=crop", // Cozy warm bed
-    "https://images.unsplash.com/photo-1540518614846-7eded433c457?q=80&w=1080&auto=format&fit=crop", // Bright airy bedroom
-    "https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?q=80&w=1080&auto=format&fit=crop", // Chic bedroom interior
-  ],
-  "kitchen": [
-    "https://images.unsplash.com/photo-1556910103-1c02745aae4d?q=80&w=1080&auto=format&fit=crop", // Clean white kitchen
-    "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=1080&auto=format&fit=crop", // Modern dark kitchen
-    "https://images.unsplash.com/photo-1524758631624-e2822e304c36?q=80&w=1080&auto=format&fit=crop", // Minimalist scandinavian kitchen
-  ],
-  "bathroom": [
-    "https://images.unsplash.com/photo-1620626011761-996317b8d101?q=80&w=1080&auto=format&fit=crop", // Modern spa bathroom
-    "https://images.unsplash.com/photo-1552321554-5fefe8c9ef14?q=80&w=1080&auto=format&fit=crop", // Aesthetic neutral bath
-    "https://images.unsplash.com/photo-1604709177595-ee9c2580e9a3?q=80&w=1080&auto=format&fit=crop", // Luxury marble bathroom
-  ],
-  "office": [
-    "https://images.unsplash.com/photo-1518455027359-f3f8164ba6bd?q=80&w=1080&auto=format&fit=crop", // Aesthetic desk setup
-    "https://images.unsplash.com/photo-1497215728101-856f4ea42174?q=80&w=1080&auto=format&fit=crop", // Bright clean office workspace
-  ]
-};
-
-export const DEFAULT_FALLBACKS = ROOM_FALLBACKS["living room"];
-
 export function resolveRoomImageUrl(roomType: string, seed: number, explicitUrl?: string): string {
   if (explicitUrl) return explicitUrl;
-  const normalizedType = roomType.toLowerCase().trim();
-  const pool = Object.entries(ROOM_FALLBACKS).find(([key]) => normalizedType.includes(key))?.[1] || DEFAULT_FALLBACKS;
+  const pool = getRoomFallbackImages(roomType);
   return pool[seed % pool.length];
 }
 

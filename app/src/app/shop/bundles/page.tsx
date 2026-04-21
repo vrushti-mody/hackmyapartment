@@ -11,6 +11,7 @@ import { getEpisodes, getCategories } from "@/lib/store-service";
 import { Episode } from "@/lib/types";
 import {
   BundleKind,
+  getBundleLabelMap,
   getBundleKind,
   getBundlePriceLabel,
   getBundlePriceValue,
@@ -22,7 +23,13 @@ import { getRoomFallbackImage } from "@/lib/room-images";
 type SortOption = "recommended" | "newest" | "price_asc" | "price_desc";
 type BundleTypeFilter = "all" | BundleKind;
 
-function BundleGridCard({ episode }: { episode: Episode }) {
+function BundleGridCard({
+  episode,
+  displayTitle,
+}: {
+  episode: Episode;
+  displayTitle: string;
+}) {
   const theme = getBundleTheme(episode);
   const bundleKind = getBundleKind(episode.reelType);
   const heroImage = episode.roomImageUrl || getRoomFallbackImage(episode.roomType, episode.id);
@@ -38,9 +45,9 @@ function BundleGridCard({ episode }: { episode: Episode }) {
           {bundleKind === "design" ? "Design Bundle" : "Upgrade Bundle"}
         </span>
       </div>
-      <div className="p-4 flex-1 flex flex-col justify-between">
+        <div className="p-4 flex-1 flex flex-col justify-between">
         <div>
-          <h3 className="font-semibold text-[15px] text-zinc-800">{getBundleTitle(episode)}</h3>
+          <h3 className="font-semibold text-[15px] text-zinc-800">{displayTitle || getBundleTitle(episode)}</h3>
           {theme && (
             <p className="text-xs text-zinc-500 mt-1 line-clamp-2">
               Theme: {theme}
@@ -80,6 +87,7 @@ export default function BundlesPage() {
   }, []);
 
   const categories = useMemo(() => ["All", ...catList], [catList]);
+  const bundleLabels = useMemo(() => getBundleLabelMap(episodes), [episodes]);
 
   const filtered = useMemo(() => {
     let results = episodes;
@@ -220,7 +228,11 @@ export default function BundlesPage() {
         {filtered.length > 0 ? (
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
             {filtered.map((ep) => (
-              <BundleGridCard key={ep.id} episode={ep} />
+              <BundleGridCard
+                key={ep.id}
+                episode={ep}
+                displayTitle={bundleLabels.get(ep.id) || getBundleTitle(ep)}
+              />
             ))}
           </div>
         ) : (

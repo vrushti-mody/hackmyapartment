@@ -47,3 +47,42 @@ export function getBundlePriceCaption(bundle: BundleIdentity): string {
     ? "sum of all items"
     : "most expensive item in bundle";
 }
+
+type BundleForLabeling = BundleIdentity & {
+  id: string;
+  createdAt?: string;
+};
+
+function getBundleGroupKey(bundle: BundleIdentity): string {
+  return `${getBundleKind(bundle.reelType)}:${bundle.roomType.trim().toLowerCase()}`;
+}
+
+export function getBundleLabelMap(bundles: BundleForLabeling[]): Map<string, string> {
+  const labels = new Map<string, string>();
+  const byGroup = new Map<string, BundleForLabeling[]>();
+
+  for (const bundle of bundles) {
+    const key = getBundleGroupKey(bundle);
+    const existing = byGroup.get(key) || [];
+    existing.push(bundle);
+    byGroup.set(key, existing);
+  }
+
+  for (const grouped of byGroup.values()) {
+    const ordered = [...grouped].sort(
+      (a, b) => new Date(b.createdAt || "").getTime() - new Date(a.createdAt || "").getTime()
+    );
+
+    if (ordered.length === 1) {
+      labels.set(ordered[0].id, getBundleTitle(ordered[0]));
+      continue;
+    }
+
+    for (let index = 0; index < ordered.length; index++) {
+      const bundle = ordered[index];
+      labels.set(bundle.id, `${getBundleTitle(bundle)} #${index + 1}`);
+    }
+  }
+
+  return labels;
+}
