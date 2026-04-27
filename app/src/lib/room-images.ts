@@ -2,8 +2,8 @@ const MIN_ROOM_IMAGE_OPTIONS = 10;
 
 function buildQueryOptions(query: string, count: number): string[] {
   return Array.from({ length: count }, (_, index) => {
-    const lock = index + 1;
-    return `https://loremflickr.com/1080/1920/${encodeURIComponent(query)}?lock=${lock}`;
+    const seed = `${query.replace(/\s+/g, "-").toLowerCase()}-${index + 1}`;
+    return `https://picsum.photos/seed/${encodeURIComponent(seed)}/1080/1920`;
   });
 }
 
