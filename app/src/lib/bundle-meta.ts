@@ -73,11 +73,6 @@ export function getBundleLabelMap(bundles: BundleForLabeling[]): Map<string, str
       (a, b) => new Date(b.createdAt || "").getTime() - new Date(a.createdAt || "").getTime()
     );
 
-    if (ordered.length === 1) {
-      labels.set(ordered[0].id, getBundleTitle(ordered[0]));
-      continue;
-    }
-
     for (let index = 0; index < ordered.length; index++) {
       const bundle = ordered[index];
       labels.set(bundle.id, `${getBundleTitle(bundle)} #${index + 1}`);

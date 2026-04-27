@@ -16,7 +16,7 @@ import {
   getBundleTheme,
   getBundleTitle,
 } from "@/lib/bundle-meta";
-import { getRoomFallbackImage } from "@/lib/room-images";
+import { getRoomFallbackImage, getRoomFallbackImages } from "@/lib/room-images";
 
 function ProductRow({ item }: { item: Item }) {
   return (
@@ -68,6 +68,7 @@ export default function BundleDetailPage() {
   const id = params.id as string;
   const [episode, setEpisode] = useState<Episode | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const [imageIndex, setImageIndex] = useState(0);
 
   useEffect(() => {
     async function loadData() {
@@ -94,7 +95,17 @@ export default function BundleDetailPage() {
     );
   }
   const theme = getBundleTheme(episode);
-  const heroImage = episode.roomImageUrl || getRoomFallbackImage(episode.roomType, episode.id);
+  const fallbackImages = getRoomFallbackImages(episode.roomType);
+  const seededImage = getRoomFallbackImage(episode.roomType, episode.id);
+  const seededIndex = Math.max(0, fallbackImages.indexOf(seededImage));
+  const orderedFallbacks = [
+    ...fallbackImages.slice(seededIndex),
+    ...fallbackImages.slice(0, seededIndex),
+  ];
+  const primary = episode.roomImageUrl?.trim() || "";
+  const candidates = primary ? [primary, ...orderedFallbacks] : orderedFallbacks;
+  const heroImage = candidates[Math.min(imageIndex, candidates.length - 1)];
+  const canFallback = imageIndex < candidates.length - 1;
 
   return (
     <div className="min-h-screen bg-white text-zinc-900">
@@ -113,7 +124,14 @@ export default function BundleDetailPage() {
         {/* Hero image */}
         <div className="rounded-2xl overflow-hidden border border-zinc-200 h-48 sm:h-64">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={heroImage} alt={episode.roomType} className="w-full h-full object-cover" />
+          <img
+            src={heroImage}
+            alt={episode.roomType}
+            className="w-full h-full object-cover"
+            onError={() => {
+              if (canFallback) setImageIndex((value) => value + 1);
+            }}
+          />
         </div>
 
         {/* Bundle info */}

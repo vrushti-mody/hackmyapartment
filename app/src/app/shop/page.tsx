@@ -17,7 +17,7 @@ import {
   getBundleTheme,
   getBundleTitle,
 } from "@/lib/bundle-meta";
-import { getRoomFallbackImage } from "@/lib/room-images";
+import { getRoomFallbackImage, getRoomFallbackImages } from "@/lib/room-images";
 
 const INSTAGRAM_URL = "https://www.instagram.com/hackmyapartment/";
 
@@ -30,7 +30,18 @@ function BundleCarouselCard({
 }) {
   const theme = getBundleTheme(episode);
   const bundleKind = getBundleKind(episode.reelType);
-  const heroImage = episode.roomImageUrl || getRoomFallbackImage(episode.roomType, episode.id);
+  const fallbackImages = getRoomFallbackImages(episode.roomType);
+  const seededImage = getRoomFallbackImage(episode.roomType, episode.id);
+  const seededIndex = Math.max(0, fallbackImages.indexOf(seededImage));
+  const orderedFallbacks = [
+    ...fallbackImages.slice(seededIndex),
+    ...fallbackImages.slice(0, seededIndex),
+  ];
+  const primary = episode.roomImageUrl?.trim() || "";
+  const candidates = primary ? [primary, ...orderedFallbacks] : orderedFallbacks;
+  const [imageIndex, setImageIndex] = useState(0);
+  const heroImage = candidates[Math.min(imageIndex, candidates.length - 1)];
+  const canFallback = imageIndex < candidates.length - 1;
   return (
     <Link
       href={`/shop/bundles/${episode.id}`}
@@ -39,7 +50,14 @@ function BundleCarouselCard({
       <div className="bg-white border border-zinc-200 rounded-2xl overflow-hidden hover:border-zinc-300 hover:shadow-md transition-all duration-200">
         <div className="h-36 overflow-hidden relative">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={heroImage} alt={episode.roomType} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+          <img
+            src={heroImage}
+            alt={episode.roomType}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            onError={() => {
+              if (canFallback) setImageIndex((value) => value + 1);
+            }}
+          />
           <span className="absolute top-2 left-2 bg-white/90 backdrop-blur-sm text-zinc-700 text-[10px] font-semibold px-2 py-0.5 rounded-full">
             {bundleKind === "design" ? "Design" : "Upgrade"}
           </span>

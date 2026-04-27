@@ -18,7 +18,7 @@ import {
   getBundleTheme,
   getBundleTitle,
 } from "@/lib/bundle-meta";
-import { getRoomFallbackImage } from "@/lib/room-images";
+import { getRoomFallbackImage, getRoomFallbackImages } from "@/lib/room-images";
 
 type SortOption = "recommended" | "newest" | "price_asc" | "price_desc";
 type BundleTypeFilter = "all" | BundleKind;
@@ -32,7 +32,18 @@ function BundleGridCard({
 }) {
   const theme = getBundleTheme(episode);
   const bundleKind = getBundleKind(episode.reelType);
-  const heroImage = episode.roomImageUrl || getRoomFallbackImage(episode.roomType, episode.id);
+  const fallbackImages = getRoomFallbackImages(episode.roomType);
+  const seededImage = getRoomFallbackImage(episode.roomType, episode.id);
+  const seededIndex = Math.max(0, fallbackImages.indexOf(seededImage));
+  const orderedFallbacks = [
+    ...fallbackImages.slice(seededIndex),
+    ...fallbackImages.slice(0, seededIndex),
+  ];
+  const primary = episode.roomImageUrl?.trim() || "";
+  const candidates = primary ? [primary, ...orderedFallbacks] : orderedFallbacks;
+  const [imageIndex, setImageIndex] = useState(0);
+  const heroImage = candidates[Math.min(imageIndex, candidates.length - 1)];
+  const canFallback = imageIndex < candidates.length - 1;
   return (
     <Link
       href={`/shop/bundles/${episode.id}`}
@@ -40,7 +51,14 @@ function BundleGridCard({
     >
       <div className="h-44 sm:h-52 overflow-hidden relative">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={heroImage} alt={episode.roomType} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+        <img
+          src={heroImage}
+          alt={episode.roomType}
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+          onError={() => {
+            if (canFallback) setImageIndex((value) => value + 1);
+          }}
+        />
         <span className="absolute top-2.5 left-2.5 bg-white/90 backdrop-blur-sm text-zinc-700 text-[11px] font-semibold px-2.5 py-1 rounded-full border border-white/20">
           {bundleKind === "design" ? "Design Bundle" : "Upgrade Bundle"}
         </span>
