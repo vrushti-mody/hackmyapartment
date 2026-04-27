@@ -11,6 +11,48 @@ import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
+function getGoogleDriveFileId(rawUrl: string): string | null {
+  try {
+    const parsed = new URL(rawUrl);
+    if (!parsed.hostname.includes("drive.google.com")) return null;
+
+    const idFromQuery = parsed.searchParams.get("id");
+    if (idFromQuery) return idFromQuery;
+
+    const match = parsed.pathname.match(/\/file\/d\/([^/]+)/);
+    if (match?.[1]) return match[1];
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function buildFetchCandidates(rawUrl: string): string[] {
+  const fileId = getGoogleDriveFileId(rawUrl);
+  if (!fileId) return [rawUrl];
+
+  return [
+    // Direct blob route
+    `https://drive.google.com/uc?export=download&id=${encodeURIComponent(fileId)}`,
+    // Direct image-friendly route
+    `https://drive.google.com/thumbnail?id=${encodeURIComponent(fileId)}&sz=w2048`,
+    rawUrl,
+  ];
+}
+
+async function fetchImageCandidate(url: string): Promise<Response> {
+  return fetch(url, {
+    headers: {
+      "User-Agent":
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/120 Safari/537.36",
+      Accept: "image/*,*/*;q=0.8",
+    },
+    redirect: "follow",
+    cache: "no-store",
+  });
+}
+
 export async function GET(req: NextRequest) {
   const url = req.nextUrl.searchParams.get("url");
 
@@ -26,27 +68,29 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const response = await fetch(decodedUrl, {
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/120 Safari/537.36",
-        Accept: "image/*,*/*;q=0.8",
-      },
-      redirect: "follow",
-      cache: "no-store", // Crucial: tell Next.js NOT to reuse the fetch buffer across requests
-    });
+    const candidates = buildFetchCandidates(decodedUrl);
 
-    if (!response.ok) {
-      return new NextResponse(`Upstream error: ${response.status}`, {
-        status: 502,
-      });
+    let response: Response | null = null;
+    let contentType = "";
+    for (const candidate of candidates) {
+      const attempt = await fetchImageCandidate(candidate);
+      if (!attempt.ok) {
+        continue;
+      }
+
+      const candidateType = (attempt.headers.get("content-type") || "").toLowerCase();
+      if (candidateType.includes("text/html")) {
+        continue;
+      }
+
+      response = attempt;
+      contentType = candidateType || "image/jpeg";
+      break;
     }
 
-    const contentType = response.headers.get("content-type") || "image/jpeg";
-
-    if (contentType.includes("text/html")) {
+    if (!response) {
       return new NextResponse(
-        `The image URL returned an HTML page instead of an image. If this is a Google Drive link, make sure it is explicitly shared as "Anyone with the link".`,
+        `The image URL returned HTML or failed upstream. If this is Google Drive, ensure the file is shared as "Anyone with the link".`,
         { status: 403 }
       );
     }
