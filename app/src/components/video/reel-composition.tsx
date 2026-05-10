@@ -137,7 +137,8 @@ function IntroSlide({
   const upgradeHookPrice = getUpgradeHookPrice(items);
 
   // Resolve the viral hook strings
-  const hook = getHook(hookIndex, roomType, budgetPhrase, upgradeHookPrice);
+  const resolvedBudgetPhrase = isCreateReel ? budgetPhrase : `$${upgradeHookPrice} and under`;
+  const hook = getHook(hookIndex, roomType, resolvedBudgetPhrase, upgradeHookPrice, reelType, theme);
 
   const titleSpring = spring({ frame, fps, config: { damping: 10, mass: 1, stiffness: 200 } });
   const themeSpring = spring({ frame: frame - 4, fps, config: { damping: 10, mass: 1, stiffness: 200 } });
@@ -147,85 +148,6 @@ function IntroSlide({
     config: { damping: 10, mass: 1, stiffness: 200 },
   });
 
-  // ── CREATE reel: keep original layout ──────────────────────────────────────
-  if (isCreateReel) {
-    return (
-      <AbsoluteFill
-        style={{ justifyContent: "center", alignItems: "center", padding: 60 }}
-      >
-        <div style={{ transform: `scale(${titleSpring})`, textAlign: "center" }}>
-          <div
-            style={{
-              fontSize: 88,
-              fontWeight: 900,
-              textTransform: "uppercase",
-              color: palette.primary,
-              textShadow: "6px 6px 0px #000",
-              lineHeight: 1.1,
-              letterSpacing: "-0.02em",
-            }}
-          >
-            {`Let's Build a`}{"\n"}{roomType}
-          </div>
-        </div>
-
-        {theme && (
-          <div
-            style={{
-              transform: `scale(${themeSpring}) rotate(2deg)`,
-              marginTop: 20,
-              textAlign: "center",
-            }}
-          >
-            <div
-              style={{
-                fontSize: 48,
-                fontWeight: 900,
-                textTransform: "uppercase",
-                color: palette.textSecondary,
-                background: palette.tertiary,
-                padding: "10px 32px",
-                borderRadius: 100,
-                border: "6px solid black",
-                boxShadow: "6px 6px 0px #000",
-                letterSpacing: "-0.02em",
-              }}
-            >
-              {theme} Vibe
-            </div>
-          </div>
-        )}
-
-        <div
-          style={{
-            transform: `scale(${subtitleSpring}) rotate(-2deg)`,
-            marginTop: 40,
-            textAlign: "center",
-          }}
-        >
-          <div
-            style={{
-              fontSize: 58,
-              fontWeight: 900,
-              textTransform: "uppercase",
-              color: palette.textSecondary,
-              background: palette.secondary,
-              padding: "16px 48px",
-              borderRadius: 16,
-              border: "6px solid black",
-              boxShadow: "8px 8px 0px #000",
-              letterSpacing: "-0.02em",
-              lineHeight: 1.15,
-            }}
-          >
-            {budgetPhrase}
-          </div>
-        </div>
-      </AbsoluteFill>
-    );
-  }
-
-  // ── UPGRADE reel: viral hook rotation ─────────────────────────────────────
   return (
     <AbsoluteFill
       style={{ justifyContent: "center", alignItems: "center", padding: 60 }}
@@ -252,11 +174,38 @@ function IntroSlide({
         </div>
       </div>
 
+      {isCreateReel && theme && (
+        <div
+          style={{
+            transform: `scale(${themeSpring}) rotate(2deg)`,
+            marginTop: 20,
+            textAlign: "center",
+          }}
+        >
+          <div
+            style={{
+              fontSize: 48,
+              fontWeight: 900,
+              textTransform: "uppercase",
+              color: palette.textSecondary,
+              background: palette.tertiary,
+              padding: "10px 32px",
+              borderRadius: 100,
+              border: "6px solid black",
+              boxShadow: "6px 6px 0px #000",
+              letterSpacing: "-0.02em",
+            }}
+          >
+            {theme} Vibe
+          </div>
+        </div>
+      )}
+
       {/* Subline pill */}
       <div
         style={{
           transform: `scale(${subtitleSpring}) rotate(-2deg)`,
-          marginTop: 40,
+          marginTop: isCreateReel && theme ? 20 : 40,
           textAlign: "center",
         }}
       >

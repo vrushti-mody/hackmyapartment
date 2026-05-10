@@ -40,14 +40,16 @@ export function generateScript(
   let cta = "";
 
   if (reelType === "create") {
-    const themeStr = theme ? `${theme.toLowerCase()} ` : "";
-    intro = `Create a beautiful ${themeStr}${roomType.toLowerCase()} for under ${roundedTotal} dollars with these finds.`;
+    // Both now use the hook system!
+    const budgetPhrase = `under $${roundedTotal}`;
+    const hook = getHook(hookIndex, roomType, budgetPhrase, 0, reelType, theme);
+    intro = hook.voiceIntro;
     cta = `Comment "${roomType.toUpperCase()}" for product links or check bio! Follow @hackmyapartment for more.`;
   } else {
     // Use the same viral hook that appears on the IntroSlide
     const upgradePrice = getUpgradeHookPrice(items);
     const budgetPhrase = `$${upgradePrice} and under`;
-    const hook = getHook(hookIndex, roomType, budgetPhrase, upgradePrice);
+    const hook = getHook(hookIndex, roomType, budgetPhrase, upgradePrice, reelType, theme);
     intro = hook.voiceIntro;
     cta = `Comment "${roomType.toUpperCase()}" for product links or check bio! Follow @hackmyapartment for more.`;
   }

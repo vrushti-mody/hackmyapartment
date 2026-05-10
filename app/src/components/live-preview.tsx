@@ -17,6 +17,7 @@ import { useState, useRef } from "react";
 import { Item } from "@/lib/types";
 import { AppSettings } from "@/components/settings-panel";
 import { getRoundedTotal, getBudgetPhrase, getUpgradeHookPrice } from "@/lib/budget";
+import { getHook } from "@/lib/hooks";
 import { generateScript, estimateScriptSeconds } from "@/lib/script";
 import { generateCaption, generateHashtags } from "@/lib/caption";
 import { generateLinksExport, downloadBlob } from "@/lib/export";
@@ -72,12 +73,9 @@ export function LivePreview({
   const roundedTotal = getRoundedTotal(rawTotal);
   const budgetPhrase = getBudgetPhrase(rawTotal);
   const upgradeHookPreview = getUpgradeHookPrice(items);
-  const hookPreview =
-    reelType === "create"
-      ? budgetPhrase
-      : upgradeHookPreview > 0
-        ? `cost $${upgradeHookPreview} and under`
-        : "";
+  
+  const resolvedBudgetPhrase = reelType === "create" ? budgetPhrase : `$${upgradeHookPreview} and under`;
+  const hookPreview = getHook(0, roomType, resolvedBudgetPhrase, upgradeHookPreview, reelType, theme).headline.replace(/\n/g, " ");
 
   const defaultScript = generateScript(items, roomType, roundedTotal, reelType, theme);
   const script = userScript || defaultScript;
