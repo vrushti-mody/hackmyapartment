@@ -6,7 +6,8 @@
  */
 
 import { Item } from "./types";
-import { formatCurrency, getUpgradeHook } from "./budget";
+import { formatCurrency, getUpgradeHook, getUpgradeHookPrice } from "./budget";
+import { getHook } from "./hooks";
 
 /** Count words in a string. */
 function wordCount(text: string): number {
@@ -30,7 +31,8 @@ export function generateScript(
   roomType: string,
   roundedTotal: number,
   reelType: "create" | "upgrade" = "upgrade",
-  theme: string = ""
+  theme: string = "",
+  hookIndex: number = 0
 ): string {
   if (items.length === 0 || !roomType) return "";
 
@@ -42,7 +44,11 @@ export function generateScript(
     intro = `Create a beautiful ${themeStr}${roomType.toLowerCase()} for under ${roundedTotal} dollars with these finds.`;
     cta = `Comment "${roomType.toUpperCase()}" for product links or check bio! Follow @hackmyapartment for more.`;
   } else {
-    intro = `${getUpgradeHook(roomType, items)}.`;
+    // Use the same viral hook that appears on the IntroSlide
+    const upgradePrice = getUpgradeHookPrice(items);
+    const budgetPhrase = `$${upgradePrice} and under`;
+    const hook = getHook(hookIndex, roomType, budgetPhrase, upgradePrice);
+    intro = hook.voiceIntro;
     cta = `Comment "${roomType.toUpperCase()}" for product links or check bio! Follow @hackmyapartment for more.`;
   }
 

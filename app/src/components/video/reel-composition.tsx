@@ -31,6 +31,7 @@ import {
 } from "../../lib/video-config";
 import { AudioTimingMapping } from "../../lib/audio-alignment";
 import { getUpgradeHookPrice } from "../../lib/budget";
+import { getHook } from "../../lib/hooks";
 import { getRoomFallbackImages } from "@/lib/room-images";
 
 export interface ReelCompositionProps extends Record<string, unknown> {
@@ -43,6 +44,8 @@ export interface ReelCompositionProps extends Record<string, unknown> {
   timings?: AudioTimingMapping | null;
   theme?: string;
   paletteIndex?: number;
+  /** Which viral hook to show in the intro slide (cycles through VIDEO_HOOKS). */
+  hookIndex?: number;
 }
 
 export interface ReelPalette {
@@ -118,6 +121,7 @@ function IntroSlide({
   reelType = "upgrade",
   theme,
   palette,
+  hookIndex = 0,
 }: {
   items: Item[];
   roomType: string;
@@ -125,11 +129,15 @@ function IntroSlide({
   reelType?: "create" | "upgrade";
   theme?: string;
   palette: ReelPalette;
+  hookIndex?: number;
 }) {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const isCreateReel = reelType === "create";
   const upgradeHookPrice = getUpgradeHookPrice(items);
+
+  // Resolve the viral hook strings
+  const hook = getHook(hookIndex, roomType, budgetPhrase, upgradeHookPrice);
 
   const titleSpring = spring({ frame, fps, config: { damping: 10, mass: 1, stiffness: 200 } });
   const themeSpring = spring({ frame: frame - 4, fps, config: { damping: 10, mass: 1, stiffness: 200 } });
@@ -139,10 +147,90 @@ function IntroSlide({
     config: { damping: 10, mass: 1, stiffness: 200 },
   });
 
+  // ── CREATE reel: keep original layout ──────────────────────────────────────
+  if (isCreateReel) {
+    return (
+      <AbsoluteFill
+        style={{ justifyContent: "center", alignItems: "center", padding: 60 }}
+      >
+        <div style={{ transform: `scale(${titleSpring})`, textAlign: "center" }}>
+          <div
+            style={{
+              fontSize: 88,
+              fontWeight: 900,
+              textTransform: "uppercase",
+              color: palette.primary,
+              textShadow: "6px 6px 0px #000",
+              lineHeight: 1.1,
+              letterSpacing: "-0.02em",
+            }}
+          >
+            {`Let's Build a`}{"\n"}{roomType}
+          </div>
+        </div>
+
+        {theme && (
+          <div
+            style={{
+              transform: `scale(${themeSpring}) rotate(2deg)`,
+              marginTop: 20,
+              textAlign: "center",
+            }}
+          >
+            <div
+              style={{
+                fontSize: 48,
+                fontWeight: 900,
+                textTransform: "uppercase",
+                color: palette.textSecondary,
+                background: palette.tertiary,
+                padding: "10px 32px",
+                borderRadius: 100,
+                border: "6px solid black",
+                boxShadow: "6px 6px 0px #000",
+                letterSpacing: "-0.02em",
+              }}
+            >
+              {theme} Vibe
+            </div>
+          </div>
+        )}
+
+        <div
+          style={{
+            transform: `scale(${subtitleSpring}) rotate(-2deg)`,
+            marginTop: 40,
+            textAlign: "center",
+          }}
+        >
+          <div
+            style={{
+              fontSize: 58,
+              fontWeight: 900,
+              textTransform: "uppercase",
+              color: palette.textSecondary,
+              background: palette.secondary,
+              padding: "16px 48px",
+              borderRadius: 16,
+              border: "6px solid black",
+              boxShadow: "8px 8px 0px #000",
+              letterSpacing: "-0.02em",
+              lineHeight: 1.15,
+            }}
+          >
+            {budgetPhrase}
+          </div>
+        </div>
+      </AbsoluteFill>
+    );
+  }
+
+  // ── UPGRADE reel: viral hook rotation ─────────────────────────────────────
   return (
     <AbsoluteFill
       style={{ justifyContent: "center", alignItems: "center", padding: 60 }}
     >
+      {/* Headline */}
       <div
         style={{
           transform: `scale(${titleSpring})`,
@@ -151,48 +239,20 @@ function IntroSlide({
       >
         <div
           style={{
-            fontSize: isCreateReel ? 88 : 66,
+            fontSize: 72,
             fontWeight: 900,
-            textTransform: isCreateReel ? "uppercase" : undefined,
             color: palette.primary,
             textShadow: "6px 6px 0px #000",
             lineHeight: 1.1,
-            letterSpacing: "-0.02em"
+            letterSpacing: "-0.02em",
+            whiteSpace: "pre-line",
           }}
         >
-          {isCreateReel
-            ? <>{`Let's Build a`}{"\n"}{roomType}</>
-            : <>Upgrade your{"\n"}{roomType.toLowerCase()}{"\n"}with these finds</>}
+          {hook.headline}
         </div>
       </div>
 
-      {isCreateReel && theme && (
-        <div
-          style={{
-            transform: `scale(${themeSpring}) rotate(2deg)`,
-            marginTop: 20,
-            textAlign: "center",
-          }}
-        >
-          <div
-            style={{
-              fontSize: 48,
-              fontWeight: 900,
-              textTransform: "uppercase",
-              color: palette.textSecondary,
-              background: palette.tertiary,
-              padding: "10px 32px",
-              borderRadius: 100,
-              border: "6px solid black",
-              boxShadow: "6px 6px 0px #000",
-              letterSpacing: "-0.02em"
-            }}
-          >
-            {theme} Vibe
-          </div>
-        </div>
-      )}
-
+      {/* Subline pill */}
       <div
         style={{
           transform: `scale(${subtitleSpring}) rotate(-2deg)`,
@@ -202,9 +262,8 @@ function IntroSlide({
       >
         <div
           style={{
-            fontSize: 58,
+            fontSize: 46,
             fontWeight: 900,
-            textTransform: isCreateReel ? "uppercase" : undefined,
             color: palette.textSecondary,
             background: palette.secondary,
             padding: "16px 48px",
@@ -212,19 +271,15 @@ function IntroSlide({
             border: "6px solid black",
             boxShadow: "8px 8px 0px #000",
             letterSpacing: "-0.02em",
-            lineHeight: 1.15,
+            lineHeight: 1.2,
           }}
         >
-          {isCreateReel
-            ? budgetPhrase
-            : <>that cost ${upgradeHookPrice}{"\n"}and under</>}
+          {hook.subline}
         </div>
       </div>
     </AbsoluteFill>
   );
 }
-
-
 
 function ProductSlide({ item, palette }: { item: Item; index: number; palette: ReelPalette }) {
   const frame = useCurrentFrame();
@@ -533,6 +588,7 @@ export function ReelComposition({
   timings,
   theme,
   paletteIndex = 0,
+  hookIndex = 0,
 }: ReelCompositionProps) {
   const { fps } = useVideoConfig();
 
@@ -560,6 +616,7 @@ export function ReelComposition({
         reelType={reelType}
         theme={theme}
         palette={palette}
+        hookIndex={hookIndex as number}
       />
     </Sequence>
   );

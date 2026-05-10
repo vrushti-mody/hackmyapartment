@@ -30,6 +30,7 @@ interface VideoPreviewProps {
   timings?: AudioTimingMapping | null;
   theme?: string;
   paletteIndex?: number;
+  hookIndex?: number;
 }
 
 function getErrorMessage(error: unknown): string {
@@ -172,6 +173,7 @@ export function VideoPreview({
   timings,
   theme,
   paletteIndex = 0,
+  hookIndex = 0,
 }: VideoPreviewProps) {
   const playerRef = useRef<PlayerRef>(null);
   const [recording, setRecording] = useState(false);
@@ -195,6 +197,7 @@ export function VideoPreview({
     timings,
     theme,
     paletteIndex,
+    hookIndex,
   };
 
   const safeSlug = roomType.toLowerCase().replace(/\s+/g, "-");
