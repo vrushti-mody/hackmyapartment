@@ -32,14 +32,14 @@ export const VIDEO_HOOKS: HookFn[] = [
     const action = reelType === "create" ? "build" : "upgrade";
     return {
       headline: `Did anyone else\nnotice that…`,
-      subline: `you can ${action} a ${roomType.toLowerCase()} for ${budgetPhrase}?`,
-      voiceIntro: `Did anyone else notice that you can ${action} a ${theme ? theme.toLowerCase() + " " : ""}${roomType.toLowerCase()} for ${budgetPhrase}?`,
+      subline: `you can ${action} your ${roomType.toLowerCase()} for ${budgetPhrase}?`,
+      voiceIntro: `Did anyone else notice that you can ${action} your ${theme ? theme.toLowerCase() + " " : ""}${roomType.toLowerCase()} for ${budgetPhrase}?`,
     };
   },
 
   // 1 — "This is crazy, but…"
   (roomType, budgetPhrase, upgradePrice, reelType, theme) => {
-    const action = reelType === "create" ? "build a" : "upgrade your";
+    const action = reelType === "create" ? "build your" : "upgrade your";
     return {
       headline: `This is crazy,\nbut…`,
       subline: `you can ${action} ${roomType.toLowerCase()} for ${budgetPhrase}`,
@@ -50,8 +50,8 @@ export const VIDEO_HOOKS: HookFn[] = [
   // 2 — "It can't just be me who…"
   (roomType, budgetPhrase, upgradePrice, reelType, theme) => ({
     headline: `It can't just be\nme who…`,
-    subline: `wants a better ${roomType.toLowerCase()} without breaking the bank`,
-    voiceIntro: `It can't just be me who wants a beautiful ${theme ? theme.toLowerCase() + " " : ""}${roomType.toLowerCase()} without spending a fortune.`,
+    subline: `wants their ${roomType.toLowerCase()} to look better without breaking the bank`,
+    voiceIntro: `It can't just be me who wants their ${theme ? theme.toLowerCase() + " " : ""}${roomType.toLowerCase()} to look beautiful without spending a fortune.`,
   }),
 
   // 3 — "The simple rule that changed how I…"
@@ -67,27 +67,27 @@ export const VIDEO_HOOKS: HookFn[] = [
   // 4 — "X has changed everything for me"
   (roomType, budgetPhrase, upgradePrice, reelType, theme) => ({
     headline: `These finds changed\neverything for me`,
-    subline: `${roomType} ${reelType === "create" ? "build" : "upgrade"} incoming 👇`,
+    subline: `your ${roomType} ${reelType === "create" ? "build" : "upgrade"} incoming 👇`,
     voiceIntro: `These finds have completely changed my ${theme ? theme.toLowerCase() + " " : ""}${roomType.toLowerCase()}. Here's what I used.`,
   }),
 
   // 5 — "Advice for people who…"
   (roomType, budgetPhrase, upgradePrice, reelType, theme) => ({
-    headline: `Advice for people\nwho…`,
-    subline: `want a dream ${roomType.toLowerCase()} for ${budgetPhrase}`,
-    voiceIntro: `Advice for people who want a gorgeous ${theme ? theme.toLowerCase() + " " : ""}${roomType.toLowerCase()} on a budget — here's everything you need for ${budgetPhrase}.`,
+    headline: `Advice for anyone\nwho…`,
+    subline: `wants to build their dream ${roomType.toLowerCase()} for ${budgetPhrase}`,
+    voiceIntro: `Advice for anyone who wants to build their gorgeous ${theme ? theme.toLowerCase() + " " : ""}${roomType.toLowerCase()} on a budget — here's everything you need for ${budgetPhrase}.`,
   }),
 
   // 6 — "X need to know this!"
   (roomType, budgetPhrase, upgradePrice, reelType, theme) => ({
-    headline: `${roomType} lovers\nneed to know this!`,
+    headline: `To everyone who loves\ntheir ${roomType}!`,
     subline: `budget ${reelType === "create" ? "build" : "upgrade"} that actually slaps`,
-    voiceIntro: `${roomType} lovers need to know this. Here are the budget finds that made this ${theme ? theme.toLowerCase() + " " : ""}${roomType.toLowerCase()} possible.`,
+    voiceIntro: `If you love your ${theme ? theme.toLowerCase() + " " : ""}${roomType.toLowerCase()}, you need to know this. Here are the budget finds that made this space possible.`,
   }),
 
   // 7 — "This is BY FAR the best way to…"
   (roomType, budgetPhrase, upgradePrice, reelType, theme) => {
-    const action = reelType === "create" ? "build a" : "upgrade your";
+    const action = reelType === "create" ? "build your" : "upgrade your";
     return {
       headline: `This is BY FAR the\nbest way to…`,
       subline: `${action} ${roomType.toLowerCase()} for ${budgetPhrase}`,
@@ -97,7 +97,7 @@ export const VIDEO_HOOKS: HookFn[] = [
 
   // 8 — "This is how we're going to…"
   (roomType, budgetPhrase, upgradePrice, reelType, theme) => {
-    const action = reelType === "create" ? "build a" : "transform your";
+    const action = reelType === "create" ? "build your" : "transform your";
     return {
       headline: `This is how we're\ngoing to…`,
       subline: `${action} ${roomType.toLowerCase()} for ${budgetPhrase}`,
@@ -107,7 +107,7 @@ export const VIDEO_HOOKS: HookFn[] = [
 
   // 9 — "This is a tricky subject, but…"
   (roomType, budgetPhrase, upgradePrice, reelType, theme) => {
-    const action = reelType === "create" ? "designing a" : "decorating your";
+    const action = reelType === "create" ? "designing your" : "decorating your";
     return {
       headline: `This is a tricky\nsubject, but…`,
       subline: `${action} ${roomType.toLowerCase()} doesn't have to be hard`,
@@ -125,8 +125,8 @@ export const VIDEO_HOOKS: HookFn[] = [
   // 11 — "Can we please stop doing X"
   (roomType, budgetPhrase, upgradePrice, reelType, theme) => ({
     headline: `Can we please stop\noverpaying for…`,
-    subline: `${roomType.toLowerCase()} decor — here's the budget hack`,
-    voiceIntro: `Can we please stop overpaying for ${theme ? theme.toLowerCase() + " " : ""}${roomType.toLowerCase()} decor? Here are the budget finds that actually work.`,
+    subline: `your ${roomType.toLowerCase()} decor — here's the budget hack`,
+    voiceIntro: `Can we please stop overpaying for your ${theme ? theme.toLowerCase() + " " : ""}${roomType.toLowerCase()} decor? Here are the budget finds that actually work.`,
   }),
 ];
 

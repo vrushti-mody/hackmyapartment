@@ -151,8 +151,9 @@ export function ProductForm({ items, onChange, geminiApiKey, roomType }: Product
               <div className="px-4 py-4 space-y-3 bg-white">
                 <div className="grid grid-cols-[1fr_90px] gap-3">
                   <div>
-                    <label className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wide mb-1 block">Title</label>
+                    <label className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wide mb-1 block">Title *</label>
                     <input
+                      required
                       value={item.title}
                       onChange={(e) => update(item.id, "title", e.target.value)}
                       placeholder="Olive oil mister, LED strip…"
@@ -160,8 +161,9 @@ export function ProductForm({ items, onChange, geminiApiKey, roomType }: Product
                     />
                   </div>
                   <div>
-                    <label className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wide mb-1 block">Price $</label>
+                    <label className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wide mb-1 block">Price $ *</label>
                     <input
+                      required
                       type="number"
                       step="0.01"
                       min="0"
@@ -175,9 +177,10 @@ export function ProductForm({ items, onChange, geminiApiKey, roomType }: Product
 
                 <div>
                   <label className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wide mb-1 block">
-                    Short Description
+                    Short Description *
                   </label>
                   <input
+                    required
                     value={item.description}
                     onChange={(e) => update(item.id, "description", e.target.value)}
                     placeholder="great for air fryers, salads, grilling…"
@@ -187,9 +190,10 @@ export function ProductForm({ items, onChange, geminiApiKey, roomType }: Product
 
                 <div>
                   <label className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wide mb-1 block">
-                    Affiliate Link
+                    Affiliate Link *
                   </label>
                   <input
+                    required
                     value={item.affiliateLink}
                     onChange={(e) => update(item.id, "affiliateLink", e.target.value)}
                     placeholder="https://amazon.com/dp/…"
@@ -199,9 +203,10 @@ export function ProductForm({ items, onChange, geminiApiKey, roomType }: Product
 
                 <div>
                   <label className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wide mb-1 block">
-                    Product Image URL
+                    Product Image URL *
                   </label>
                   <input
+                    required
                     value={item.imageUrl}
                     onChange={(e) => update(item.id, "imageUrl", e.target.value)}
                     onBlur={(e) => update(item.id, "imageUrl", transcodeGoogleDriveUrl(e.target.value))}

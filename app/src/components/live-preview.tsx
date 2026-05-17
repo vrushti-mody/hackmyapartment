@@ -88,7 +88,7 @@ export function LivePreview({
   const linksMessage = generateLinksExport(items, roomType);
   const estSecs = estimateScriptSeconds(script);
   const fullCaption = caption ? `${caption}\n\n${hashtags.join(" ")}` : "";
-  const canGenerate = !!roomType && items.length > 0;
+  const canGenerate = !!roomType && items.length > 0 && items.every(i => i.title && i.amount > 0 && i.description && i.affiliateLink && i.imageUrl);
 
   function copy(text: string, key: string) {
     navigator.clipboard.writeText(text);

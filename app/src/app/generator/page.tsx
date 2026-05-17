@@ -301,7 +301,7 @@ function GeneratorDashboard() {
             )}
             <button
               onClick={publishToStorefront}
-              disabled={!effectiveRoom || items.length === 0 || isPublishing}
+              disabled={!effectiveRoom || items.length === 0 || items.some(i => !i.title || i.amount <= 0 || !i.description || !i.affiliateLink || !i.imageUrl) || isPublishing}
               className="w-full bg-zinc-900 hover:bg-zinc-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold py-3.5 rounded-2xl text-sm transition"
             >
               {isPublishing ? "Publishing..." : "🌎 Publish to Storefront"}
